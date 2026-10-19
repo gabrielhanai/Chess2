@@ -1,5 +1,6 @@
-// cosmetics.js - Sistema de Skins, Modelos 3D e Cosméticos por Equipe
+// cosmetics.js - Sistema Ultra-Otimizado com Fusão de Geometrias (Merged BufferGeometries)
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ==========================================
 // 1. CATÁLOGO DE SKINS (CORES E MATERIAIS)
@@ -53,7 +54,7 @@ export const SKINS = {
 };
 
 // ==========================================
-// 2. CATÁLOGO DE MODELOS 3D (GEOMETRIAS)
+// 2. CATÁLOGO DE MODELOS 3D E COSMÉTICOS
 // ==========================================
 export const MODELS = {
     staunton: { name: "Clássico Staunton (Torneado)" },
@@ -61,9 +62,6 @@ export const MODELS = {
     imperial: { name: "Imperial Real (Ornamentado)" }
 };
 
-// ==========================================
-// 3. CATÁLOGO DE COSMÉTICOS E EFEITOS EXTRAS
-// ==========================================
 export const COSMETICS = {
     none: { name: "Nenhum (Padrão)" },
     halo: { name: "Auréola Celestial Flutuante" },
@@ -72,11 +70,12 @@ export const COSMETICS = {
 };
 
 // ==========================================
-// 4. ESTADO SALVO POR EQUIPE (LOCALSTORAGE)
+// 3. ESTADO SALVO POR EQUIPE (LOCALSTORAGE)
 // ==========================================
 const defaultConfig = {
     w: { skin: 'marfim', model: 'staunton', cosmetic: 'none' },
-    b: { skin: 'obsidiana', model: 'staunton', cosmetic: 'none' }
+    b: { skin: 'obsidiana', model: 'staunton', cosmetic: 'none' },
+    quality: 'medium' // 'low' (Turbo), 'medium' (Equilibrado), 'high' (Ultra)
 };
 
 export function loadTeamConfig() {
@@ -86,7 +85,8 @@ export function loadTeamConfig() {
             const parsed = JSON.parse(saved);
             return {
                 w: { ...defaultConfig.w, ...parsed.w },
-                b: { ...defaultConfig.b, ...parsed.b }
+                b: { ...defaultConfig.b, ...parsed.b },
+                quality: parsed.quality || defaultConfig.quality
             };
         }
     } catch (e) {
@@ -104,26 +104,19 @@ export function saveTeamConfig(config) {
 }
 
 // ==========================================
-// 5. CONSTRUTOR DE PEÇAS COM SKINS E COSMÉTICOS
+// 4. CACHE DE GEOMETRIAS FUNDIDAS E MATERIAIS
 // ==========================================
-function createLathePart(pointsCoords, material, segments = 36) {
-    const points = pointsCoords.map(([x, y]) => new THREE.Vector2(x, y));
-    const geo = new THREE.LatheGeometry(points, segments);
-    const mesh = new THREE.Mesh(geo, material);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    return mesh;
-}
+const mergedPieceCache = new Map();
+const cosmeticGeoCache = new Map();
+const materialCache = new Map();
 
-export function buildCustomPieceMesh(type, color, teamConfig) {
-    const cfg = teamConfig[color];
-    const skinData = SKINS[cfg.skin] || SKINS.marfim;
-    const modelStyle = cfg.model || 'staunton';
-    const cosmeticStyle = cfg.cosmetic || 'none';
+function getCachedMaterials(skinKey, modelStyle) {
+    const cacheKey = `${skinKey}_${modelStyle}`;
+    if (materialCache.has(cacheKey)) {
+        return materialCache.get(cacheKey);
+    }
 
-    // Segmentos da malha: modelo Cyber usa 6 lados (hexagonal low-poly), outros usam curvas suaves
-    const latheSegments = modelStyle === 'cyber' ? 6 : 36;
-    const sphereSegments = modelStyle === 'cyber' ? 6 : 28;
+    const skinData = SKINS[skinKey] || SKINS.marfim;
     const flatShading = modelStyle === 'cyber';
 
     const mainMat = new THREE.MeshStandardMaterial({
@@ -142,165 +135,254 @@ export function buildCustomPieceMesh(type, color, teamConfig) {
         flatShading: flatShading
     });
 
-    const group = new THREE.Group();
-    const upperType = type.toUpperCase();
+    const haloMat = new THREE.MeshBasicMaterial({ color: skinData.trimColor });
+    const gemColor = skinData.emissive !== 0x000000 ? skinData.emissive : skinData.trimColor;
+    const gemMat = new THREE.MeshBasicMaterial({ color: gemColor });
+    const auraMat = new THREE.MeshBasicMaterial({
+        color: gemColor,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.75,
+        depthWrite: false
+    });
 
-    // Anel metálico da base
-    const ringGeo = new THREE.CylinderGeometry(0.49, 0.51, 0.05, latheSegments);
-    const ringMesh = new THREE.Mesh(ringGeo, trimMat);
-    ringMesh.position.y = 0.025;
-    group.add(ringMesh);
+    const mats = { mainMat, trimMat, haloMat, gemMat, auraMat };
+    materialCache.set(cacheKey, mats);
+    return mats;
+}
 
-    // Colar Imperial extra se o modelo for 'imperial'
+// Normaliza atributos para que BufferGeometryUtils.mergeGeometries funcione sem erros
+function prepareGeo(geo) {
+    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    if (g.attributes.uv) g.deleteAttribute('uv');
+    g.computeVertexNormals();
+    return g;
+}
+
+function createLatheGeo(pointsCoords, segments) {
+    const points = pointsCoords.map(([x, y]) => new THREE.Vector2(x, y));
+    return prepareGeo(new THREE.LatheGeometry(points, segments));
+}
+
+// Constrói e funde todas as sub-partes da peça em APENAS 2 BufferGeometries (bodyGeo e trimGeo)
+function getMergedPieceGeometries(upperType, modelStyle, color) {
+    const rotTag = upperType === 'N' ? color : 'sym';
+    const key = `${upperType}_${modelStyle}_${rotTag}`;
+    if (mergedPieceCache.has(key)) {
+        return mergedPieceCache.get(key);
+    }
+
+    const latheSegments = modelStyle === 'cyber' ? 6 : 16;
+    const sphereSegments = modelStyle === 'cyber' ? 6 : 12;
+
+    const mainGeos = [];
+    const trimGeos = [];
+
+    // Anel da base
+    const baseRing = prepareGeo(new THREE.CylinderGeometry(0.49, 0.51, 0.05, latheSegments));
+    baseRing.translate(0, 0.025, 0);
+    trimGeos.push(baseRing);
+
     if (modelStyle === 'imperial') {
-        const collarGeo = new THREE.TorusGeometry(0.32, 0.045, 12, 32);
-        collarGeo.rotateX(Math.PI / 2);
-        const collarMesh = new THREE.Mesh(collarGeo, trimMat);
-        collarMesh.position.y = 0.78;
-        group.add(collarMesh);
+        const collar = prepareGeo(new THREE.TorusGeometry(0.32, 0.045, 8, 16));
+        collar.rotateX(Math.PI / 2);
+        collar.translate(0, 0.78, 0);
+        trimGeos.push(collar);
     }
 
     let topHeight = 1.3;
 
     if (upperType === 'P') {
-        const body = createLathePart([
+        mainGeos.push(createLatheGeo([
             [0, 0], [0.46, 0], [0.46, 0.1], [0.38, 0.18], [0.34, 0.25],
             [0.18, 0.55], [0.14, 0.85], [0.26, 0.90], [0.15, 0.96], [0, 0.96]
-        ], mainMat, latheSegments);
+        ], latheSegments));
 
-        const headGeo = modelStyle === 'cyber'
-            ? new THREE.OctahedronGeometry(0.26, 0)
-            : new THREE.SphereGeometry(0.24, sphereSegments, sphereSegments);
-        const head = new THREE.Mesh(headGeo, mainMat);
-        head.position.y = 1.15;
-        head.castShadow = true;
-        group.add(body, head);
+        const head = prepareGeo(
+            modelStyle === 'cyber'
+                ? new THREE.OctahedronGeometry(0.26, 0)
+                : new THREE.SphereGeometry(0.24, sphereSegments, sphereSegments)
+        );
+        head.translate(0, 1.15, 0);
+        mainGeos.push(head);
         topHeight = 1.5;
     } 
     else if (upperType === 'R') {
-        const body = createLathePart([
+        mainGeos.push(createLatheGeo([
             [0, 0], [0.50, 0], [0.50, 0.12], [0.42, 0.24], [0.32, 0.45],
             [0.27, 1.05], [0.36, 1.15], [0.36, 1.32], [0.22, 1.32], [0.22, 1.18], [0, 1.18]
-        ], mainMat, latheSegments);
-        group.add(body);
+        ], latheSegments));
+
         const battlements = modelStyle === 'imperial' ? 8 : 6;
         for (let i = 0; i < battlements; i++) {
             const angle = (i / battlements) * Math.PI * 2;
-            const b = new THREE.Mesh(
-                new THREE.BoxGeometry(0.12, 0.18, 0.12),
-                modelStyle === 'imperial' && i % 2 === 0 ? trimMat : mainMat
-            );
-            b.position.set(Math.cos(angle) * 0.29, 1.38, Math.sin(angle) * 0.29);
-            b.rotation.y = -angle;
-            b.castShadow = true;
-            group.add(b);
+            const b = prepareGeo(new THREE.BoxGeometry(0.12, 0.18, 0.12));
+            b.rotateY(-angle);
+            b.translate(Math.cos(angle) * 0.29, 1.38, Math.sin(angle) * 0.29);
+            if (modelStyle === 'imperial' && i % 2 === 0) {
+                trimGeos.push(b);
+            } else {
+                mainGeos.push(b);
+            }
         }
         topHeight = 1.65;
     } 
     else if (upperType === 'N') {
-        const base = createLathePart([
+        mainGeos.push(createLatheGeo([
             [0, 0], [0.50, 0], [0.50, 0.12], [0.42, 0.22], [0.34, 0.36], [0, 0.36]
-        ], mainMat, latheSegments);
-        group.add(base);
+        ], latheSegments));
 
-        const horseGroup = new THREE.Group();
-        const neck = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.78, 0.44), mainMat);
-        neck.position.set(0, 0.72, -0.04); neck.rotation.x = 0.22; neck.castShadow = true;
+        const rotY = color === 'w' ? Math.PI : 0;
 
-        const snout = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.55, latheSegments), mainMat);
-        snout.position.set(0, 1.08, 0.22); snout.rotation.x = Math.PI * 0.42; snout.castShadow = true;
+        const neck = prepareGeo(new THREE.BoxGeometry(0.32, 0.78, 0.44));
+        neck.rotateX(0.22);
+        neck.translate(0, 0.72, -0.04);
+        if (rotY) neck.rotateY(rotY);
+        mainGeos.push(neck);
 
-        const maneMat = modelStyle === 'ST' ? mainMat : trimMat;
-        const mane = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.68, 0.18), maneMat);
-        mane.position.set(0, 0.80, -0.22); mane.rotation.x = 0.18; mane.castShadow = true;
+        const snout = prepareGeo(new THREE.ConeGeometry(0.22, 0.55, latheSegments));
+        snout.rotateX(Math.PI * 0.42);
+        snout.translate(0, 1.08, 0.22);
+        if (rotY) snout.rotateY(rotY);
+        mainGeos.push(snout);
 
-        const earL = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.22, 8), trimMat);
-        earL.position.set(0.09, 1.28, -0.02);
-        const earR = earL.clone(); earR.position.x = -0.09;
+        const mane = prepareGeo(new THREE.BoxGeometry(0.10, 0.68, 0.18));
+        mane.rotateX(0.18);
+        mane.translate(0, 0.80, -0.22);
+        if (rotY) mane.rotateY(rotY);
+        trimGeos.push(mane);
 
-        horseGroup.add(neck, snout, mane, earL, earR);
-        horseGroup.rotation.y = color === 'w' ? Math.PI : 0;
-        group.add(horseGroup);
+        const earL = prepareGeo(new THREE.ConeGeometry(0.06, 0.22, 6));
+        earL.translate(0.09, 1.28, -0.02);
+        if (rotY) earL.rotateY(rotY);
+        trimGeos.push(earL);
+
+        const earR = prepareGeo(new THREE.ConeGeometry(0.06, 0.22, 6));
+        earR.translate(-0.09, 1.28, -0.02);
+        if (rotY) earR.rotateY(rotY);
+        trimGeos.push(earR);
+
         topHeight = 1.65;
     } 
     else if (upperType === 'B') {
-        const body = createLathePart([
+        mainGeos.push(createLatheGeo([
             [0, 0], [0.50, 0], [0.50, 0.12], [0.40, 0.24], [0.20, 0.70],
             [0.16, 1.08], [0.28, 1.14], [0.18, 1.20], [0, 1.20]
-        ], mainMat, latheSegments);
-        const mitreGeo = modelStyle === 'cyber'
-            ? new THREE.OctahedronGeometry(0.30, 0)
-            : new THREE.SphereGeometry(0.26, sphereSegments, sphereSegments);
-        const mitre = new THREE.Mesh(mitreGeo, mainMat);
-        mitre.scale.set(1, 1.45, 1); mitre.position.y = 1.42; mitre.castShadow = true;
+        ], latheSegments));
 
-        const tip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), trimMat);
-        tip.position.y = 1.82;
-        group.add(body, mitre, tip);
+        const mitre = prepareGeo(
+            modelStyle === 'cyber'
+                ? new THREE.OctahedronGeometry(0.30, 0)
+                : new THREE.SphereGeometry(0.26, sphereSegments, sphereSegments)
+        );
+        mitre.scale(1, 1.45, 1);
+        mitre.translate(0, 1.42, 0);
+        mainGeos.push(mitre);
+
+        const tip = prepareGeo(new THREE.SphereGeometry(0.07, 8, 8));
+        tip.translate(0, 1.82, 0);
+        trimGeos.push(tip);
         topHeight = 2.0;
     } 
     else if (upperType === 'Q') {
-        const body = createLathePart([
+        mainGeos.push(createLatheGeo([
             [0, 0], [0.54, 0], [0.54, 0.14], [0.44, 0.26], [0.24, 0.75],
             [0.19, 1.32], [0.34, 1.42], [0.26, 1.50], [0.36, 1.72], [0, 1.65]
-        ], mainMat, latheSegments);
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.22, sphereSegments, sphereSegments), mainMat);
-        dome.position.y = 1.68;
-        const coronet = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), trimMat);
-        coronet.position.y = 1.94;
-        group.add(body, dome, coronet);
+        ], latheSegments));
+
+        const dome = prepareGeo(new THREE.SphereGeometry(0.22, sphereSegments, sphereSegments));
+        dome.translate(0, 1.68, 0);
+        mainGeos.push(dome);
+
+        const coronet = prepareGeo(new THREE.SphereGeometry(0.08, 8, 8));
+        coronet.translate(0, 1.94, 0);
+        trimGeos.push(coronet);
 
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
-            const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), trimMat);
-            pearl.position.set(Math.cos(angle) * 0.34, 1.75, Math.sin(angle) * 0.34);
-            group.add(pearl);
+            const pearl = prepareGeo(new THREE.SphereGeometry(0.045, 6, 6));
+            pearl.translate(Math.cos(angle) * 0.34, 1.75, Math.sin(angle) * 0.34);
+            trimGeos.push(pearl);
         }
         topHeight = 2.15;
     } 
     else if (upperType === 'K') {
-        const body = createLathePart([
+        mainGeos.push(createLatheGeo([
             [0, 0], [0.56, 0], [0.56, 0.14], [0.46, 0.28], [0.26, 0.80],
             [0.21, 1.45], [0.36, 1.55], [0.28, 1.65], [0.38, 1.90], [0, 1.88]
-        ], mainMat, latheSegments);
-        const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.34, 0.09), trimMat);
-        crossV.position.y = 2.12;
-        const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.09, 0.09), trimMat);
-        crossH.position.y = 2.16;
-        group.add(body, crossV, crossH);
+        ], latheSegments));
+
+        const crossV = prepareGeo(new THREE.BoxGeometry(0.09, 0.34, 0.09));
+        crossV.translate(0, 2.12, 0);
+        const crossH = prepareGeo(new THREE.BoxGeometry(0.25, 0.09, 0.09));
+        crossH.translate(0, 2.16, 0);
+        trimGeos.push(crossV, crossH);
         topHeight = 2.45;
     }
 
-    // ==========================================
-    // APLICAR COSMÉTICOS VISUAIS EXTRAS
-    // ==========================================
+    const mergedMain = BufferGeometryUtils.mergeGeometries(mainGeos, false);
+    const mergedTrim = BufferGeometryUtils.mergeGeometries(trimGeos, false);
+
+    const result = { mergedMain, mergedTrim, topHeight };
+    mergedPieceCache.set(key, result);
+    return result;
+}
+
+function getCosmeticGeo(key, createFn) {
+    if (!cosmeticGeoCache.has(key)) {
+        cosmeticGeoCache.set(key, createFn());
+    }
+    return cosmeticGeoCache.get(key);
+}
+
+// ==========================================
+// 5. CONSTRUTOR DE PEÇAS OTIMIZADO
+// ==========================================
+export function buildCustomPieceMesh(type, color, teamConfig) {
+    const cfg = teamConfig[color];
+    const skinKey = cfg.skin || 'marfim';
+    const modelStyle = cfg.model || 'staunton';
+    const cosmeticStyle = cfg.cosmetic || 'none';
+    const shadowsEnabled = teamConfig.quality !== 'low';
+
+    const { mainMat, trimMat, haloMat, gemMat, auraMat } = getCachedMaterials(skinKey, modelStyle);
+    const upperType = type.toUpperCase();
+
+    const { mergedMain, mergedTrim, topHeight } = getMergedPieceGeometries(upperType, modelStyle, color);
+
+    const group = new THREE.Group();
+
+    const mainMesh = new THREE.Mesh(mergedMain, mainMat);
+    mainMesh.castShadow = shadowsEnabled;
+    mainMesh.receiveShadow = shadowsEnabled;
+    group.add(mainMesh);
+
+    const trimMesh = new THREE.Mesh(mergedTrim, trimMat);
+    trimMesh.castShadow = false; // Adornos pequenos não precisam projetar sombra (economiza GPU)
+    trimMesh.receiveShadow = false;
+    group.add(trimMesh);
+
     if (cosmeticStyle === 'halo') {
-        const haloGeo = new THREE.TorusGeometry(0.26, 0.025, 12, 32);
-        haloGeo.rotateX(Math.PI / 2);
-        const haloMat = new THREE.MeshBasicMaterial({ color: skinData.trimColor });
+        const haloGeo = getCosmeticGeo('cosm_halo', () => {
+            const g = new THREE.TorusGeometry(0.26, 0.025, 8, 16);
+            g.rotateX(Math.PI / 2);
+            return g;
+        });
         const halo = new THREE.Mesh(haloGeo, haloMat);
         halo.position.y = topHeight + 0.12;
         group.add(halo);
     } 
     else if (cosmeticStyle === 'crown_gems') {
-        const gemGeo = new THREE.OctahedronGeometry(0.11, 0);
-        const gemMat = new THREE.MeshBasicMaterial({
-            color: skinData.emissive !== 0x000000 ? skinData.emissive : skinData.trimColor,
-            wireframe: false
-        });
+        const gemGeo = getCosmeticGeo('cosm_gem', () => new THREE.OctahedronGeometry(0.11, 0));
         const gem = new THREE.Mesh(gemGeo, gemMat);
         gem.position.y = topHeight + 0.16;
         group.add(gem);
     } 
     else if (cosmeticStyle === 'aura_ring') {
-        const auraGeo = new THREE.RingGeometry(0.52, 0.63, 24);
-        auraGeo.rotateX(-Math.PI / 2);
-        const auraMat = new THREE.MeshBasicMaterial({
-            color: skinData.emissive !== 0x000000 ? skinData.emissive : skinData.trimColor,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.75,
-            depthWrite: false
+        const auraGeo = getCosmeticGeo('cosm_aura', () => {
+            const g = new THREE.RingGeometry(0.52, 0.63, 16);
+            g.rotateX(-Math.PI / 2);
+            return g;
         });
         const aura = new THREE.Mesh(auraGeo, auraMat);
         aura.position.y = 0.02;
@@ -322,10 +404,7 @@ export function initCosmeticsUI(teamConfig, onChangeCallback) {
 
         if (skinSelect) {
             skinSelect.innerHTML = '';
-            Object.entries(SKINS).forEach(([key, val]) => {
-                const opt = new Option(val.name, key);
-                skinSelect.add(opt);
-            });
+            Object.entries(SKINS).forEach(([key, val]) => skinSelect.add(new Option(val.name, key)));
             skinSelect.value = teamConfig[t].skin;
             skinSelect.addEventListener('change', (e) => {
                 teamConfig[t].skin = e.target.value;
@@ -336,10 +415,7 @@ export function initCosmeticsUI(teamConfig, onChangeCallback) {
 
         if (modelSelect) {
             modelSelect.innerHTML = '';
-            Object.entries(MODELS).forEach(([key, val]) => {
-                const opt = new Option(val.name, key);
-                modelSelect.add(opt);
-            });
+            Object.entries(MODELS).forEach(([key, val]) => modelSelect.add(new Option(val.name, key)));
             modelSelect.value = teamConfig[t].model;
             modelSelect.addEventListener('change', (e) => {
                 teamConfig[t].model = e.target.value;
@@ -350,10 +426,7 @@ export function initCosmeticsUI(teamConfig, onChangeCallback) {
 
         if (cosmSelect) {
             cosmSelect.innerHTML = '';
-            Object.entries(COSMETICS).forEach(([key, val]) => {
-                const opt = new Option(val.name, key);
-                cosmSelect.add(opt);
-            });
+            Object.entries(COSMETICS).forEach(([key, val]) => cosmSelect.add(new Option(val.name, key)));
             cosmSelect.value = teamConfig[t].cosmetic;
             cosmSelect.addEventListener('change', (e) => {
                 teamConfig[t].cosmetic = e.target.value;

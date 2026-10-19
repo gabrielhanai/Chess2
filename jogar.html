@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jogar Xadrez 3D - Modo Interativo Cinematográfico</title>
     <style>
         * {
@@ -10,12 +10,14 @@
             margin: 0;
             padding: 0;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             overflow: hidden;
             background-color: #0d0f14;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             color: #f0f0f0;
+            touch-action: none;
         }
         #canvas-container {
             width: 100vw;
@@ -26,27 +28,42 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(18, 22, 31, 0.88);
-            backdrop-filter: blur(12px);
+            background: rgba(18, 22, 31, 0.94);
             border: 1px solid rgba(212, 175, 55, 0.35);
             border-radius: 12px;
-            padding: 20px;
-            width: 350px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            padding: 18px;
+            width: 340px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
             z-index: 10;
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
         #cosmetics-panel {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(18, 22, 31, 0.90);
-            backdrop-filter: blur(12px);
+            background: rgba(18, 22, 31, 0.94);
             border: 1px solid rgba(212, 175, 55, 0.35);
             border-radius: 12px;
             padding: 16px;
-            width: 310px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-            z-index: 10;
+            width: 300px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+            z-index: 20;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        #mobile-skins-btn {
+            display: none;
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 25;
+            background: rgba(18, 22, 31, 0.95);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         .team-box {
             background: rgba(0, 0, 0, 0.4);
@@ -80,58 +97,58 @@
             cursor: pointer;
         }
         h1 {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             color: #d4af37;
             margin-bottom: 4px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
         }
         .subtitle {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             color: #aaa;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
+            padding-bottom: 8px;
         }
         .status-box {
             background: rgba(0, 0, 0, 0.45);
             border-left: 3px solid #d4af37;
-            padding: 12px;
+            padding: 10px 12px;
             border-radius: 6px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
         .turn-badge {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: #94a3b8;
             text-transform: uppercase;
         }
         .status-text {
-            font-size: 1.05rem;
+            font-size: 1.02rem;
             font-weight: 700;
             color: #fff;
-            margin-top: 4px;
+            margin-top: 2px;
         }
         .last-move {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             color: #cbd5e1;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .controls {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 10px;
         }
         button, select {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.15);
             color: #fff;
-            padding: 9px 10px;
+            padding: 8px 8px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 600;
-            transition: all 0.2s ease;
+            transition: background 0.2s ease, border-color 0.2s ease;
         }
         select option {
             background: #12161f;
@@ -144,19 +161,18 @@
         .mode-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            margin-bottom: 12px;
-            font-size: 0.8rem;
+            gap: 4px;
+            margin-bottom: 10px;
+            font-size: 0.76rem;
             color: #ccc;
         }
         .slider-group {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             color: #ccc;
-            margin-top: 4px;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
         input[type="range"] {
             width: 55%;
@@ -172,25 +188,69 @@
             border: 1px solid rgba(212, 175, 55, 0.4);
             color: #d4af37;
             font-weight: 700;
-            font-size: 0.82rem;
-            padding: 10px;
+            font-size: 0.8rem;
+            padding: 9px;
             border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        .back-btn:hover {
-            background: rgba(212, 175, 55, 0.2);
         }
         .cam-hint {
             position: absolute;
-            bottom: 20px;
+            bottom: 16px;
             right: 20px;
-            background: rgba(18, 22, 31, 0.75);
-            padding: 10px 16px;
+            background: rgba(18, 22, 31, 0.8);
+            padding: 8px 14px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             color: #bbb;
             border: 1px solid rgba(255, 255, 255, 0.1);
             pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-skins-btn {
+                display: block;
+            }
+            #ui-panel {
+                top: auto;
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                padding: 12px;
+                max-height: 45vh;
+                overflow-y: auto;
+            }
+            #ui-panel h1 {
+                font-size: 0.95rem;
+            }
+            #ui-panel .subtitle {
+                display: none;
+            }
+            .status-box {
+                padding: 8px 10px;
+                margin-bottom: 8px;
+            }
+            .controls {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            #cosmetics-panel {
+                top: 52px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+                max-height: 75vh;
+                overflow-y: auto;
+                transform: translateY(-120%);
+                opacity: 0;
+                pointer-events: none;
+            }
+            #cosmetics-panel.open {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .cam-hint {
+                display: none;
+            }
         }
     </style>
     <script type="importmap">
@@ -205,9 +265,11 @@
 </head>
 <body>
 
+<button id="mobile-skins-btn">🎨 Skins & Efeitos</button>
+
 <div id="ui-panel">
     <h1>Xadrez 3D Jogável</h1>
-    <div class="subtitle">Clique em uma peça e depois na casa de destino</div>
+    <div class="subtitle">Toque/Clique em uma peça e depois na casa de destino</div>
 
     <div class="status-box">
         <div class="turn-badge" id="ui-turn">Turno Atual</div>
@@ -216,7 +278,6 @@
     </div>
 
     <div class="mode-group">
-        <label for="game-mode">Modo de Jogo:</label>
         <select id="game-mode">
             <option value="ai">1 Jogador (Brancas) vs. IA (Pretas)</option>
             <option value="pvp">2 Jogadores Locais (Brancas vs. Pretas)</option>
@@ -224,21 +285,29 @@
     </div>
 
     <div class="controls">
-        <button id="btn-new">Nova Partida</button>
-        <button id="btn-undo">Desfazer Lance</button>
-        <button id="btn-cam-w">Visão Brancas</button>
-        <button id="btn-cam-b">Visão Pretas</button>
+        <button id="btn-new">Nova</button>
+        <button id="btn-undo">Desfazer</button>
+        <button id="btn-cam-w">Brancas</button>
+        <button id="btn-cam-b">Pretas</button>
     </div>
 
     <div class="slider-group">
-        <span>Velocidade da Animação:</span>
+        <span>Velocidade:</span>
         <input type="range" id="speed-slider" min="0.6" max="2.5" step="0.1" value="1.2">
+    </div>
+
+    <div class="slider-group">
+        <span>Gráficos (FPS):</span>
+        <select id="quality-select" style="width: 58%;">
+            <option value="low">⚡ Leve (Turbo FPS)</option>
+            <option value="medium">⚖️ Médio (Equilibrado)</option>
+            <option value="high">✨ Alto (Sombras Suaves)</option>
+        </select>
     </div>
 
     <a href="index.html" class="back-btn">⬅ Voltar para A Partida da Ópera</a>
 </div>
 
-<!-- PAINEL DE SKINS E COSMÉTICOS POR TIME -->
 <div id="cosmetics-panel">
     <h1>🎨 Skins & Cosméticos</h1>
     <div class="subtitle">Escolha o visual de cada time</div>
@@ -276,69 +345,90 @@
     </div>
 </div>
 
-<div class="cam-hint">Clique Esquerdo: Selecionar / Mover Peça • Arrastar: Girar Câmera</div>
+<div class="cam-hint">Clique/Toque: Selecionar e Mover • Arrastar: Girar Câmera</div>
 <div id="canvas-container"></div>
 
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { Chess } from 'chess.js';
-import { loadTeamConfig, buildCustomPieceMesh, initCosmeticsUI } from './cosmetics.js';
+import { loadTeamConfig, saveTeamConfig, buildCustomPieceMesh, initCosmeticsUI } from './cosmetics.js';
 
 const teamConfig = loadTeamConfig();
 
+const mobileSkinsBtn = document.getElementById('mobile-skins-btn');
+const cosmeticsPanel = document.getElementById('cosmetics-panel');
+mobileSkinsBtn.addEventListener('click', () => {
+    const isOpen = cosmeticsPanel.classList.toggle('open');
+    mobileSkinsBtn.textContent = isOpen ? '✖ Fechar Skins' : '🎨 Skins & Efeitos';
+});
+
 // ==========================================
-// 1. CENA, CÂMERA E RENDERIZADOR
+// 1. CENA, CÂMERA E RENDERIZADOR OTIMIZADOS
 // ==========================================
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0c0e14);
 scene.fog = new THREE.FogExp2(0x0c0e14, 0.018);
 
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 13.5, 14.5);
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.5, 65);
+
+function setResponsiveCamera(side = 'w') {
+    const isMobile = window.innerWidth < 768;
+    const zDist = isMobile ? 19.5 : 14.5;
+    const yHeight = isMobile ? 16.5 : 13.5;
+    camera.position.set(0, yHeight, side === 'w' ? zDist : -zDist);
+}
+setResponsiveCamera('w');
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 container.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
+controls.dampingFactor = 0.06;
 controls.maxPolarAngle = Math.PI / 2 - 0.04;
 controls.minDistance = 6;
-controls.maxDistance = 30;
-controls.target.set(0, 0.4, 0);
+controls.maxDistance = 34;
+controls.target.set(0, 0.2, 0);
 
 // ==========================================
 // 2. ILUMINAÇÃO CINEMATOGRÁFICA E MATERIAIS
 // ==========================================
-scene.add(new THREE.AmbientLight(0xdbeafe, 0.55));
+scene.add(new THREE.AmbientLight(0xdbeafe, 0.6));
 
 const mainLight = new THREE.DirectionalLight(0xfff7ed, 2.2);
 mainLight.position.set(10, 18, 12);
 mainLight.castShadow = true;
-mainLight.shadow.mapSize.set(2048, 2048);
-const d = 10;
+mainLight.shadow.mapSize.set(1024, 1024);
+const d = 8.5;
 mainLight.shadow.camera.left = -d;
 mainLight.shadow.camera.right = d;
 mainLight.shadow.camera.top = d;
 mainLight.shadow.camera.bottom = -d;
-mainLight.shadow.bias = -0.0005;
+mainLight.shadow.camera.near = 5;
+mainLight.shadow.camera.far = 32;
+mainLight.shadow.bias = -0.0008;
 scene.add(mainLight);
 
 const rimLight = new THREE.DirectionalLight(0x60a5fa, 0.9);
 rimLight.position.set(-12, 10, -12);
 scene.add(rimLight);
 
-const warmPoint = new THREE.PointLight(0xd4af37, 1.5, 25);
-warmPoint.position.set(0, 8, 0);
+const warmPoint = new THREE.PointLight(0xd4af37, 1.4, 22);
+warmPoint.position.set(0, 7.5, 0);
 scene.add(warmPoint);
+
+function requestShadowUpdate() {
+    if (renderer.shadowMap.enabled) {
+        renderer.shadowMap.needsUpdate = true;
+    }
+}
 
 const lightSquareMat = new THREE.MeshStandardMaterial({ color: 0xe2d5be, roughness: 0.25, metalness: 0.05 });
 const darkSquareMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.3, metalness: 0.05 });
@@ -346,7 +436,7 @@ const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e1108, roughness: 0.
 const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.25, metalness: 0.85 });
 
 // ==========================================
-// 3. TABULEIRO, CASAS CLICÁVEIS E DESTAQUES
+// 3. TABULEIRO FUNDIDO E PLANO DE CLIQUE RÁPIDO
 // ==========================================
 const SQUARE_SIZE = 1.4;
 const BOARD_OFFSET = (7 * SQUARE_SIZE) / 2;
@@ -373,37 +463,58 @@ function algebraicToCoord(sq) {
 const boardGroup = new THREE.Group();
 scene.add(boardGroup);
 
-const squareGeo = new THREE.BoxGeometry(SQUARE_SIZE, 0.3, SQUARE_SIZE);
-const interactiveSquares = [];
+const lightGeos = [];
+const darkGeos = [];
+const baseSquareGeo = new THREE.BoxGeometry(SQUARE_SIZE, 0.3, SQUARE_SIZE);
 
 for (let file = 0; file < 8; file++) {
     for (let rank = 0; rank < 8; rank++) {
         const isLight = (file + rank) % 2 !== 0;
-        const mesh = new THREE.Mesh(squareGeo, isLight ? lightSquareMat : darkSquareMat);
         const pos = coordToWorld(file, rank);
-        mesh.position.set(pos.x, -0.15, pos.z);
-        mesh.receiveShadow = true;
-        mesh.userData = { square: fileRankToAlgebraic(file, rank), file, rank };
-        boardGroup.add(mesh);
-        interactiveSquares.push(mesh);
+        const g = baseSquareGeo.clone();
+        g.translate(pos.x, -0.15, pos.z);
+        if (isLight) lightGeos.push(g);
+        else darkGeos.push(g);
     }
 }
+
+const lightSquaresMesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(lightGeos, false), lightSquareMat);
+lightSquaresMesh.receiveShadow = true;
+lightSquaresMesh.matrixAutoUpdate = false;
+boardGroup.add(lightSquaresMesh);
+
+const darkSquaresMesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(darkGeos, false), darkSquareMat);
+darkSquaresMesh.receiveShadow = true;
+darkSquaresMesh.matrixAutoUpdate = false;
+boardGroup.add(darkSquaresMesh);
+
+// Plano único invisível para detectar cliques no tabuleiro instantaneamente sem testar 64 caixas
+const hitPlaneGeo = new THREE.PlaneGeometry(8 * SQUARE_SIZE, 8 * SQUARE_SIZE);
+hitPlaneGeo.rotateX(-Math.PI / 2);
+const boardHitPlane = new THREE.Mesh(hitPlaneGeo, new THREE.MeshBasicMaterial({ visible: false }));
+boardHitPlane.userData.isBoardPlane = true;
+scene.add(boardHitPlane);
 
 const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(8 * SQUARE_SIZE + 1.8, 0.5, 8 * SQUARE_SIZE + 1.8), frameMat);
 frameMesh.position.y = -0.32;
 frameMesh.receiveShadow = true;
+frameMesh.updateMatrix();
+frameMesh.matrixAutoUpdate = false;
 boardGroup.add(frameMesh);
 
 const trimMesh = new THREE.Mesh(new THREE.BoxGeometry(8 * SQUARE_SIZE + 0.3, 0.32, 8 * SQUARE_SIZE + 0.3), goldMat);
 trimMesh.position.y = -0.19;
+trimMesh.updateMatrix();
+trimMesh.matrixAutoUpdate = false;
 boardGroup.add(trimMesh);
 
-const tableMesh = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 0.6, 64), new THREE.MeshStandardMaterial({ color: 0x121318, roughness: 0.6 }));
+const tableMesh = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 0.6, 32), new THREE.MeshStandardMaterial({ color: 0x121318, roughness: 0.6 }));
 tableMesh.position.y = -0.88;
 tableMesh.receiveShadow = true;
+tableMesh.updateMatrix();
+tableMesh.matrixAutoUpdate = false;
 scene.add(tableMesh);
 
-// Destaques de origem e destino do último lance (idênticos ao index.html)
 const highlightGeo = new THREE.PlaneGeometry(SQUARE_SIZE * 0.90, SQUARE_SIZE * 0.90);
 highlightGeo.rotateX(-Math.PI / 2);
 
@@ -416,24 +527,25 @@ toHighlight.position.y = 0.015;
 scene.add(toHighlight);
 
 // ==========================================
-// 4. EFEITO DE PARTÍCULAS EM CAPTURAS
+// 4. EFEITO DE PARTÍCULAS EM CAPTURAS (OTIMIZADO)
 // ==========================================
+const sharedRingGeo = new THREE.RingGeometry(0.1, 0.25, 20);
+sharedRingGeo.rotateX(-Math.PI / 2);
+const sharedSparkGeo = new THREE.SphereGeometry(0.055, 5, 5);
+
 const activeEffects = [];
 
 function spawnCaptureEffect(position) {
-    const ringGeo = new THREE.RingGeometry(0.1, 0.25, 32);
-    ringGeo.rotateX(-Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
+    const ring = new THREE.Mesh(sharedRingGeo, ringMat);
     ring.position.copy(position);
     ring.position.y = 0.05;
     scene.add(ring);
 
+    const sparksMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 1 });
     const sparks = [];
-    const sparkGeo = new THREE.SphereGeometry(0.055, 8, 8);
-    for (let i = 0; i < 18; i++) {
-        const sparkMat = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xfacc15 : 0xffffff, transparent: true });
-        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+    for (let i = 0; i < 10; i++) {
+        const spark = new THREE.Mesh(sharedSparkGeo, sparksMat);
         spark.position.copy(position);
         spark.position.y = 0.4;
         const angle = Math.random() * Math.PI * 2;
@@ -443,7 +555,7 @@ function spawnCaptureEffect(position) {
         sparks.push(spark);
     }
 
-    activeEffects.push({ ring, sparks, age: 0, duration: 0.75 });
+    activeEffects.push({ ring, ringMat, sparks, sparksMat, age: 0, duration: 0.75 });
 }
 
 function updateEffects(dt) {
@@ -455,24 +567,37 @@ function updateEffects(dt) {
         if (t >= 1) {
             scene.remove(eff.ring);
             eff.sparks.forEach(s => scene.remove(s));
+            eff.ringMat.dispose();
+            eff.sparksMat.dispose();
             activeEffects.splice(i, 1);
             continue;
         }
 
         const scale = 1 + t * 5.5;
         eff.ring.scale.set(scale, scale, scale);
-        eff.ring.material.opacity = (1 - t) * 0.9;
+        eff.ringMat.opacity = (1 - t) * 0.9;
+        eff.sparksMat.opacity = 1 - t;
 
         eff.sparks.forEach(s => {
             s.position.addScaledVector(s.userData.vel, dt);
             s.userData.vel.y -= 9.8 * dt;
-            s.material.opacity = 1 - t;
         });
     }
 }
 
 // ==========================================
-// 5. ESTADO DO TABULEIRO 3D, CEMITÉRIO E ANIMAÇÕES
+// 5. GEOMETRIAS COMPARTILHADAS PARA MARCADORES DE LANCES
+// ==========================================
+const markerCircleGeo = new THREE.CircleGeometry(0.24, 16);
+markerCircleGeo.rotateX(-Math.PI / 2);
+const markerRingGeo = new THREE.RingGeometry(0.42, 0.58, 20);
+markerRingGeo.rotateX(-Math.PI / 2);
+
+const markerNormalMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
+const markerCaptureMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
+
+// ==========================================
+// 6. ESTADO DO TABULEIRO 3D E ANIMAÇÕES
 // ==========================================
 const game = new Chess();
 let boardState = Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -487,7 +612,7 @@ let selectedSquare = null;
 let legalMovesForSelected = [];
 let moveMarkers = [];
 
-const selectedRingGeo = new THREE.RingGeometry(0.45, 0.58, 32);
+const selectedRingGeo = new THREE.RingGeometry(0.45, 0.58, 20);
 selectedRingGeo.rotateX(-Math.PI / 2);
 const selectedRingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false });
 const selectedRingMesh = new THREE.Mesh(selectedRingGeo, selectedRingMat);
@@ -508,6 +633,7 @@ function getGraveyardPos(color, index) {
 }
 
 function setPieceSquareTag(mesh, sq) {
+    mesh.userData.square = sq;
     mesh.traverse(child => {
         if (child.isMesh) {
             child.userData.square = sq;
@@ -527,20 +653,10 @@ function showMoveMarkers(moves) {
         const pos = coordToWorld(file, rank);
         const isCapture = m.captured || m.flags.includes('e');
 
-        const geo = isCapture
-            ? new THREE.RingGeometry(0.42, 0.58, 32)
-            : new THREE.CircleGeometry(0.24, 24);
-        geo.rotateX(-Math.PI / 2);
-
-        const mat = new THREE.MeshBasicMaterial({
-            color: isCapture ? 0xef4444 : 0x22c55e,
-            transparent: true,
-            opacity: 0.8,
-            side: THREE.DoubleSide,
-            depthWrite: false
-        });
-
-        const marker = new THREE.Mesh(geo, mat);
+        const marker = new THREE.Mesh(
+            isCapture ? markerRingGeo : markerCircleGeo,
+            isCapture ? markerCaptureMat : markerNormalMat
+        );
         marker.position.set(pos.x, 0.02, pos.z);
         scene.add(marker);
         moveMarkers.push(marker);
@@ -561,7 +677,6 @@ function spawnPieceOnBoard(type, color, file, rank) {
     return pieceObj;
 }
 
-// Reconstrói o tabuleiro inteiro e o cemitério (usado ao iniciar partida ou desfazer lance)
 function rebuildFullSceneFromChessJS() {
     activeAnimation = null;
     allPieces.forEach(p => scene.remove(p.mesh));
@@ -586,7 +701,6 @@ function rebuildFullSceneFromChessJS() {
         }
     }
 
-    // Recria no cemitério as peças já capturadas caso o jogador use o botão Desfazer
     ['w', 'b'].forEach(col => {
         Object.keys(initialCounts[col]).forEach(type => {
             const missing = Math.max(0, initialCounts[col][type] - currentCounts[col][type]);
@@ -620,9 +734,10 @@ function rebuildFullSceneFromChessJS() {
         toHighlight.material.opacity = 0;
         updateStatusUI();
     }
+
+    requestShadowUpdate();
 }
 
-// Atualiza as skins em tempo real sem perder a posição das peças na mesa ou no cemitério
 function refreshAllPieceSkins() {
     allPieces.forEach(p => {
         const oldPos = p.mesh.position.clone();
@@ -642,16 +757,40 @@ function refreshAllPieceSkins() {
         scene.add(newMesh);
         p.mesh = newMesh;
     });
+    requestShadowUpdate();
 }
+
+function applyQualitySettings(quality) {
+    teamConfig.quality = quality;
+    saveTeamConfig(teamConfig);
+
+    if (quality === 'low') {
+        renderer.setPixelRatio(1.0);
+        renderer.shadowMap.enabled = false;
+    } else if (quality === 'medium') {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+    } else {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
+    refreshAllPieceSkins();
+    requestShadowUpdate();
+}
+
+const qualitySelect = document.getElementById('quality-select');
+qualitySelect.value = teamConfig.quality || 'medium';
+qualitySelect.addEventListener('change', (e) => applyQualitySettings(e.target.value));
 
 initCosmeticsUI(teamConfig, refreshAllPieceSkins);
 
-// Dispara a animação dinâmica idêntica à demonstração para qualquer lance executado
 function executeAnimatedMove(moveResult, onCompleteCallback) {
     const fromCoord = algebraicToCoord(moveResult.from);
     const toCoord = algebraicToCoord(moveResult.to);
 
-    // Verifica se o lance foi Roque (Rei + Torre movendo juntos)
     if (moveResult.flags.includes('k') || moveResult.flags.includes('q')) {
         const isKingside = moveResult.flags.includes('k');
         const rank = fromCoord.rank;
@@ -693,12 +832,10 @@ function executeAnimatedMove(moveResult, onCompleteCallback) {
         return;
     }
 
-    // Movimento padrão, Captura, En Passant ou Promoção
     const piece = boardState[fromCoord.file][fromCoord.rank];
     let capturedPiece = null;
 
     if (moveResult.flags.includes('e')) {
-        // Captura En Passant: o peão capturado está na mesma coluna de destino, mas na fileira de origem
         capturedPiece = boardState[toCoord.file][fromCoord.rank];
         boardState[toCoord.file][fromCoord.rank] = null;
     } else {
@@ -728,11 +865,9 @@ function executeAnimatedMove(moveResult, onCompleteCallback) {
         setPieceSquareTag(capturedPiece.mesh, null);
         capStartPos = capturedPiece.mesh.position.clone();
 
-        if (capturedPiece.color === 'w') {
-            gravePos = getGraveyardPos('w', capturedWhiteCount++);
-        } else {
-            gravePos = getGraveyardPos('b', capturedBlackCount++);
-        }
+        gravePos = capturedPiece.color === 'w'
+            ? getGraveyardPos('w', capturedWhiteCount++)
+            : getGraveyardPos('b', capturedBlackCount++);
     }
 
     const arcHeight = piece.type === 'N' ? 2.1 : 0.35;
@@ -754,8 +889,12 @@ function executeAnimatedMove(moveResult, onCompleteCallback) {
     };
 }
 
+const tempDir = new THREE.Vector3();
+
 function updateAnimation(dt) {
     if (!activeAnimation) return;
+
+    requestShadowUpdate();
 
     activeAnimation.progress += (dt * playbackSpeed) / activeAnimation.duration;
     const rawT = Math.min(activeAnimation.progress, 1);
@@ -774,10 +913,10 @@ function updateAnimation(dt) {
         piece.mesh.position.lerpVectors(startPos, endPos, e);
         piece.mesh.position.y = Math.sin(e * Math.PI) * arcHeight;
 
-        const dir = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+        tempDir.subVectors(endPos, startPos).normalize();
         const tiltAngle = Math.sin(e * Math.PI) * 0.16;
-        piece.mesh.rotation.x = dir.z * tiltAngle;
-        piece.mesh.rotation.z = -dir.x * tiltAngle;
+        piece.mesh.rotation.x = tempDir.z * tiltAngle;
+        piece.mesh.rotation.z = -tempDir.x * tiltAngle;
 
         if (capturedPiece) {
             if (rawT >= 0.52 && !activeAnimation.impactTriggered) {
@@ -804,7 +943,6 @@ function updateAnimation(dt) {
             piece.mesh.position.copy(endPos);
             piece.mesh.rotation.set(0, 0, 0);
 
-            // Se houve promoção de Peão (ex: para Dama), substitui a malha 3D no pouso
             if (promotion) {
                 scene.remove(piece.mesh);
                 piece.type = promotion;
@@ -822,6 +960,7 @@ function updateAnimation(dt) {
             }
         }
 
+        requestShadowUpdate();
         const callback = activeAnimation.onComplete;
         activeAnimation = null;
         if (callback) callback();
@@ -849,7 +988,7 @@ function updateStatusUI(lastSan = null) {
 }
 
 // ==========================================
-// 6. INTELIGÊNCIA ARTIFICIAL
+// 7. INTELIGÊNCIA ARTIFICIAL
 // ==========================================
 const pieceValues = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 
@@ -894,7 +1033,7 @@ function makeAIMove() {
 }
 
 // ==========================================
-// 7. INTERAÇÃO COM O MOUSE (RAYCASTER 3D)
+// 8. INTERAÇÃO COM O MOUSE / TOQUE ULTRA-RÁPIDA
 // ==========================================
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -905,11 +1044,10 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
 });
 
 renderer.domElement.addEventListener('pointerup', (e) => {
-    // Bloqueia cliques enquanto uma animação estiver em andamento
     if (activeAnimation) return;
 
     const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
-    if (dist > 6) return;
+    if (dist > 10) return;
 
     const mode = document.getElementById('game-mode').value;
     if (mode === 'ai' && game.turn() === 'b') return;
@@ -920,18 +1058,32 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 
     raycaster.setFromCamera(mouse, camera);
 
-    const activePieceMeshes = allPieces.filter(p => !p.captured).map(p => p.mesh);
-    const hits = raycaster.intersectObjects([...activePieceMeshes, ...interactiveSquares], true);
+    const activePieceMeshes = [];
+    for (let i = 0; i < allPieces.length; i++) {
+        if (!allPieces[i].captured) activePieceMeshes.push(allPieces[i].mesh);
+    }
 
+    const hits = raycaster.intersectObjects([...activePieceMeshes, boardHitPlane], true);
     if (hits.length === 0) return;
 
     let clickedSquare = null;
-    let obj = hits[0].object;
-    while (obj && !clickedSquare) {
-        if (obj.userData && obj.userData.square) {
-            clickedSquare = obj.userData.square;
+    const firstHit = hits[0];
+
+    if (firstHit.object.userData.isBoardPlane) {
+        const pt = firstHit.point;
+        const file = Math.floor((pt.x + 4 * SQUARE_SIZE) / SQUARE_SIZE);
+        const rank = 7 - Math.floor((pt.z + 4 * SQUARE_SIZE) / SQUARE_SIZE);
+        if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+            clickedSquare = fileRankToAlgebraic(file, rank);
         }
-        obj = obj.parent;
+    } else {
+        let obj = firstHit.object;
+        while (obj && !clickedSquare) {
+            if (obj.userData && obj.userData.square) {
+                clickedSquare = obj.userData.square;
+            }
+            obj = obj.parent;
+        }
     }
 
     if (!clickedSquare) return;
@@ -979,7 +1131,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 });
 
 // ==========================================
-// 8. BOTÕES DE CONTROLE E LOOP DE RENDER
+// 9. BOTÕES DE CONTROLE E LOOP DE RENDER
 // ==========================================
 document.getElementById('btn-new').addEventListener('click', () => {
     game.reset();
@@ -1007,13 +1159,8 @@ document.getElementById('btn-undo').addEventListener('click', () => {
     rebuildFullSceneFromChessJS();
 });
 
-document.getElementById('btn-cam-w').addEventListener('click', () => {
-    camera.position.set(0, 13.5, 14.5);
-});
-
-document.getElementById('btn-cam-b').addEventListener('click', () => {
-    camera.position.set(0, 13.5, -14.5);
-});
+document.getElementById('btn-cam-w').addEventListener('click', () => setResponsiveCamera('w'));
+document.getElementById('btn-cam-b').addEventListener('click', () => setResponsiveCamera('b'));
 
 document.getElementById('speed-slider').addEventListener('input', (e) => {
     playbackSpeed = parseFloat(e.target.value);
@@ -1026,6 +1173,8 @@ window.addEventListener('resize', () => {
 });
 
 rebuildFullSceneFromChessJS();
+applyQualitySettings(teamConfig.quality || 'medium');
+
 const clock = new THREE.Clock();
 
 function animate() {
