@@ -3,8 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jogar Xadrez 3D - Modo Interativo Cinematográfico</title>
+    <title>Xadrez 3D — Modo Interativo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-panel: rgba(12, 14, 18, 0.78);
+            --bg-surface: rgba(255, 255, 255, 0.035);
+            --bg-control: rgba(255, 255, 255, 0.055);
+            --bg-control-hover: rgba(255, 255, 255, 0.1);
+            --bg-active: rgba(255, 255, 255, 0.16);
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --radius-sharp: 2px;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -12,241 +27,321 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
+
         body {
             overflow: hidden;
-            background-color: #0d0f14;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: #f0f0f0;
+            background-color: #0c0e14;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
             touch-action: none;
+            -webkit-font-smoothing: antialiased;
         }
+
         #canvas-container {
             width: 100vw;
             height: 100vh;
             display: block;
         }
-        #ui-panel {
+
+        .panel {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(18, 22, 31, 0.94);
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            border-radius: 12px;
-            padding: 18px;
-            width: 340px;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+            top: 24px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: none;
+            outline: none;
+            border-radius: var(--radius-sharp);
+            padding: 16px 18px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
             z-index: 10;
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            transition: padding 0.25s ease, opacity 0.25s ease;
         }
+
+        #ui-panel {
+            left: 24px;
+            width: 310px;
+        }
+
         #cosmetics-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(18, 22, 31, 0.94);
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            border-radius: 12px;
-            padding: 16px;
-            width: 300px;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+            right: 24px;
+            width: 280px;
             z-index: 20;
-            transition: transform 0.3s ease, opacity 0.3s ease;
         }
-        #mobile-skins-btn {
-            display: none;
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            z-index: 25;
-            background: rgba(18, 22, 31, 0.95);
-            border: 1px solid #d4af37;
-            color: #d4af37;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
-        .team-box {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .team-title {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #d4af37;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-        .field-row {
+
+        .panel-header {
             display: flex;
-            flex-direction: column;
-            margin-bottom: 7px;
-            font-size: 0.75rem;
-            color: #cbd5e1;
-        }
-        .field-row select {
-            margin-top: 3px;
-            background: #161b26;
-            color: #fff;
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            padding: 6px;
-            border-radius: 5px;
-            font-size: 0.78rem;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
             cursor: pointer;
         }
-        h1 {
-            font-size: 1.1rem;
-            color: #d4af37;
-            margin-bottom: 4px;
-            letter-spacing: 0.5px;
+
+        .panel-title-group h1 {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.1em;
             text-transform: uppercase;
         }
+
         .subtitle {
-            font-size: 0.78rem;
-            color: #aaa;
-            margin-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 8px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+            font-weight: 400;
         }
-        .status-box {
-            background: rgba(0, 0, 0, 0.45);
-            border-left: 3px solid #d4af37;
-            padding: 10px 12px;
-            border-radius: 6px;
-            margin-bottom: 12px;
+
+        .minimize-btn {
+            background: var(--bg-control);
+            border: none;
+            outline: none;
+            color: var(--text-secondary);
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-sharp);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            line-height: 1;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s ease, color 0.15s ease;
         }
-        .turn-badge {
-            font-size: 0.72rem;
-            color: #94a3b8;
-            text-transform: uppercase;
-        }
-        .status-text {
-            font-size: 1.02rem;
-            font-weight: 700;
+
+        .minimize-btn:hover {
+            background: var(--bg-control-hover);
             color: #fff;
-            margin-top: 2px;
         }
-        .last-move {
-            font-size: 0.78rem;
-            color: #cbd5e1;
+
+        .panel-body {
+            margin-top: 16px;
+            overflow: hidden;
+            max-height: 650px;
+            opacity: 1;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-top 0.25s ease;
+        }
+
+        .panel.minimized {
+            padding: 12px 16px;
+        }
+
+        .panel.minimized .subtitle {
+            display: none;
+        }
+
+        .panel.minimized .panel-body {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            pointer-events: none;
+        }
+
+        .status-box {
+            background: var(--bg-surface);
+            padding: 12px;
+            border-radius: var(--radius-sharp);
+            margin-bottom: 12px;
+        }
+
+        .turn-badge {
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .status-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
             margin-top: 4px;
         }
+
+        .last-move {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .mode-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
         .controls {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
         }
+
         button, select {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #fff;
-            padding: 8px 8px;
-            border-radius: 6px;
+            font-family: inherit;
+            background: var(--bg-control);
+            border: none;
+            outline: none;
+            color: var(--text-secondary);
+            padding: 8px 10px;
+            border-radius: var(--radius-sharp);
             cursor: pointer;
-            font-size: 0.78rem;
-            font-weight: 600;
-            transition: background 0.2s ease, border-color 0.2s ease;
+            font-size: 0.72rem;
+            font-weight: 500;
+            transition: background 0.15s ease, color 0.15s ease;
         }
-        select option {
-            background: #12161f;
-            color: #fff;
-        }
+
         button:hover, select:hover {
-            background: rgba(212, 175, 55, 0.25);
-            border-color: #d4af37;
+            background: var(--bg-control-hover);
+            color: var(--text-primary);
         }
-        .mode-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            margin-bottom: 10px;
-            font-size: 0.76rem;
-            color: #ccc;
+
+        button:focus, select:focus {
+            outline: none;
+            box-shadow: none;
         }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 24px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2371717a' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        select option {
+            background: #14171f;
+            color: var(--text-primary);
+        }
+
         .slider-group {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.76rem;
-            color: #ccc;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
             margin-bottom: 10px;
         }
+
         input[type="range"] {
-            width: 55%;
-            accent-color: #d4af37;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 56%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 0;
+            outline: none;
             cursor: pointer;
         }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: var(--radius-sharp);
+            background: var(--text-primary);
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            border-radius: var(--radius-sharp);
+            background: var(--text-primary);
+            cursor: pointer;
+            border: none;
+        }
+
         .back-btn {
             display: block;
             width: 100%;
+            margin-top: 14px;
             text-align: center;
             text-decoration: none;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            color: #d4af37;
-            font-weight: 700;
-            font-size: 0.8rem;
-            padding: 9px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.72rem;
+            padding: 10px;
+            border-radius: var(--radius-sharp);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: background 0.15s ease, color 0.15s ease;
         }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+        }
+
+        .team-box {
+            background: var(--bg-surface);
+            border-radius: var(--radius-sharp);
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .team-title {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+
+        .field-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 8px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .field-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .field-row select {
+            margin-top: 4px;
+            width: 100%;
+        }
+
         .cam-hint {
             position: absolute;
-            bottom: 16px;
-            right: 20px;
-            background: rgba(18, 22, 31, 0.8);
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 0.76rem;
-            color: #bbb;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            bottom: 20px;
+            right: 24px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            padding: 7px 12px;
+            border-radius: var(--radius-sharp);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            letter-spacing: 0.03em;
             pointer-events: none;
         }
 
         @media (max-width: 768px) {
-            #mobile-skins-btn {
-                display: block;
-            }
             #ui-panel {
                 top: auto;
-                bottom: 10px;
-                left: 10px;
-                right: 10px;
+                bottom: 12px;
+                left: 12px;
+                right: 12px;
                 width: auto;
-                padding: 12px;
-                max-height: 45vh;
-                overflow-y: auto;
             }
-            #ui-panel h1 {
-                font-size: 0.95rem;
-            }
-            #ui-panel .subtitle {
-                display: none;
-            }
-            .status-box {
-                padding: 8px 10px;
-                margin-bottom: 8px;
+            #cosmetics-panel {
+                top: 12px;
+                left: 12px;
+                right: 12px;
+                width: auto;
             }
             .controls {
                 grid-template-columns: repeat(4, 1fr);
-            }
-            #cosmetics-panel {
-                top: 52px;
-                right: 10px;
-                left: 10px;
-                width: auto;
-                max-height: 75vh;
-                overflow-y: auto;
-                transform: translateY(-120%);
-                opacity: 0;
-                pointer-events: none;
-            }
-            #cosmetics-panel.open {
-                transform: translateY(0);
-                opacity: 1;
-                pointer-events: auto;
             }
             .cam-hint {
                 display: none;
@@ -265,87 +360,99 @@
 </head>
 <body>
 
-<button id="mobile-skins-btn">🎨 Skins & Efeitos</button>
-
-<div id="ui-panel">
-    <h1>Xadrez 3D Jogável</h1>
-    <div class="subtitle">Toque/Clique em uma peça e depois na casa de destino</div>
-
-    <div class="status-box">
-        <div class="turn-badge" id="ui-turn">Turno Atual</div>
-        <div class="status-text" id="ui-status">Vez das Brancas</div>
-        <div class="last-move" id="ui-lastmove">Selecione uma peça branca para começar.</div>
+<div id="ui-panel" class="panel">
+    <div class="panel-header" data-toggle="ui-panel">
+        <div class="panel-title-group">
+            <h1>Modo Interativo</h1>
+            <div class="subtitle">Selecione uma peça e a casa de destino</div>
+        </div>
+        <button class="minimize-btn" title="Minimizar / Expandir">&minus;</button>
     </div>
 
-    <div class="mode-group">
-        <select id="game-mode">
-            <option value="ai">1 Jogador (Brancas) vs. IA (Pretas)</option>
-            <option value="pvp">2 Jogadores Locais (Brancas vs. Pretas)</option>
-        </select>
-    </div>
-
-    <div class="controls">
-        <button id="btn-new">Nova</button>
-        <button id="btn-undo">Desfazer</button>
-        <button id="btn-cam-w">Brancas</button>
-        <button id="btn-cam-b">Pretas</button>
-    </div>
-
-    <div class="slider-group">
-        <span>Velocidade:</span>
-        <input type="range" id="speed-slider" min="0.6" max="2.5" step="0.1" value="1.2">
-    </div>
-
-    <div class="slider-group">
-        <span>Gráficos (FPS):</span>
-        <select id="quality-select" style="width: 58%;">
-            <option value="low">⚡ Leve (Turbo FPS)</option>
-            <option value="medium">⚖️ Médio (Equilibrado)</option>
-            <option value="high">✨ Alto (Sombras Suaves)</option>
-        </select>
-    </div>
-
-    <a href="index.html" class="back-btn">⬅ Voltar para A Partida da Ópera</a>
-</div>
-
-<div id="cosmetics-panel">
-    <h1>🎨 Skins & Cosméticos</h1>
-    <div class="subtitle">Escolha o visual de cada time</div>
-
-    <div class="team-box">
-        <div class="team-title">♔ Equipe das Brancas</div>
-        <div class="field-row">
-            <label>Cor / Material (Skin):</label>
-            <select id="skin-w"></select>
+    <div class="panel-body">
+        <div class="status-box">
+            <div class="turn-badge" id="ui-turn">Turno Atual</div>
+            <div class="status-text" id="ui-status">Vez das Brancas</div>
+            <div class="last-move" id="ui-lastmove">Selecione uma peça branca para começar.</div>
         </div>
-        <div class="field-row">
-            <label>Modelo 3D:</label>
-            <select id="model-w"></select>
-        </div>
-        <div class="field-row">
-            <label>Cosmético / Efeito:</label>
-            <select id="cosmetic-w"></select>
-        </div>
-    </div>
 
-    <div class="team-box" style="margin-bottom: 0;">
-        <div class="team-title">♚ Equipe das Pretas</div>
-        <div class="field-row">
-            <label>Cor / Material (Skin):</label>
-            <select id="skin-b"></select>
+        <div class="mode-group">
+            <select id="game-mode">
+                <option value="ai">1 Jogador (Brancas) vs. IA (Pretas)</option>
+                <option value="pvp">2 Jogadores Locais (Brancas vs. Pretas)</option>
+            </select>
         </div>
-        <div class="field-row">
-            <label>Modelo 3D:</label>
-            <select id="model-b"></select>
+
+        <div class="controls">
+            <button id="btn-new">Nova Partida</button>
+            <button id="btn-undo">Desfazer</button>
+            <button id="btn-cam-w">Visão Brancas</button>
+            <button id="btn-cam-b">Visão Pretas</button>
         </div>
-        <div class="field-row">
-            <label>Cosmético / Efeito:</label>
-            <select id="cosmetic-b"></select>
+
+        <div class="slider-group">
+            <span>Velocidade</span>
+            <input type="range" id="speed-slider" min="0.6" max="2.5" step="0.1" value="1.2">
         </div>
+
+        <div class="slider-group">
+            <span>Qualidade</span>
+            <select id="quality-select" style="width: 56%;">
+                <option value="low">Leve (Performance)</option>
+                <option value="medium">Médio (Equilibrado)</option>
+                <option value="high">Alto (Sombras Suaves)</option>
+            </select>
+        </div>
+
+        <a href="index.html" class="back-btn">Voltar para A Partida da Ópera</a>
     </div>
 </div>
 
-<div class="cam-hint">Clique/Toque: Selecionar e Mover • Arrastar: Girar Câmera</div>
+<div id="cosmetics-panel" class="panel">
+    <div class="panel-header" data-toggle="cosmetics-panel">
+        <div class="panel-title-group">
+            <h1>Estética & Peças</h1>
+            <div class="subtitle">Configuração de materiais e geometria</div>
+        </div>
+        <button class="minimize-btn" title="Minimizar / Expandir">&minus;</button>
+    </div>
+
+    <div class="panel-body">
+        <div class="team-box">
+            <div class="team-title">Peças Brancas</div>
+            <div class="field-row">
+                <label>Acabamento</label>
+                <select id="skin-w"></select>
+            </div>
+            <div class="field-row">
+                <label>Geometria</label>
+                <select id="model-w"></select>
+            </div>
+            <div class="field-row">
+                <label>Detalhe</label>
+                <select id="cosmetic-w"></select>
+            </div>
+        </div>
+
+        <div class="team-box" style="margin-bottom: 0;">
+            <div class="team-title">Peças Pretas</div>
+            <div class="field-row">
+                <label>Acabamento</label>
+                <select id="skin-b"></select>
+            </div>
+            <div class="field-row">
+                <label>Geometria</label>
+                <select id="model-b"></select>
+            </div>
+            <div class="field-row">
+                <label>Detalhe</label>
+                <select id="cosmetic-b"></select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cam-hint">Clique: Selecionar e Mover &bull; Arraste: Orbitar Câmera</div>
 <div id="canvas-container"></div>
 
 <script type="module">
@@ -357,12 +464,21 @@ import { loadTeamConfig, saveTeamConfig, buildCustomPieceMesh, initCosmeticsUI }
 
 const teamConfig = loadTeamConfig();
 
-const mobileSkinsBtn = document.getElementById('mobile-skins-btn');
-const cosmeticsPanel = document.getElementById('cosmetics-panel');
-mobileSkinsBtn.addEventListener('click', () => {
-    const isOpen = cosmeticsPanel.classList.toggle('open');
-    mobileSkinsBtn.textContent = isOpen ? '✖ Fechar Skins' : '🎨 Skins & Efeitos';
+// Sistema de Minimizar Painéis
+document.querySelectorAll('.panel-header').forEach(header => {
+    header.addEventListener('click', () => {
+        const panel = document.getElementById(header.dataset.toggle);
+        const btn = header.querySelector('.minimize-btn');
+        const isMin = panel.classList.toggle('minimized');
+        btn.innerHTML = isMin ? '&#43;' : '&minus;';
+    });
 });
+
+if (window.innerWidth < 768) {
+    const cosmPanel = document.getElementById('cosmetics-panel');
+    cosmPanel.classList.add('minimized');
+    cosmPanel.querySelector('.minimize-btn').innerHTML = '&#43;';
+}
 
 // ==========================================
 // 1. CENA, CÂMERA E RENDERIZADOR OTIMIZADOS
@@ -488,7 +604,6 @@ darkSquaresMesh.receiveShadow = true;
 darkSquaresMesh.matrixAutoUpdate = false;
 boardGroup.add(darkSquaresMesh);
 
-// Plano único invisível para detectar cliques no tabuleiro instantaneamente sem testar 64 caixas
 const hitPlaneGeo = new THREE.PlaneGeometry(8 * SQUARE_SIZE, 8 * SQUARE_SIZE);
 hitPlaneGeo.rotateX(-Math.PI / 2);
 const boardHitPlane = new THREE.Mesh(hitPlaneGeo, new THREE.MeshBasicMaterial({ visible: false }));
@@ -527,7 +642,7 @@ toHighlight.position.y = 0.015;
 scene.add(toHighlight);
 
 // ==========================================
-// 4. EFEITO DE PARTÍCULAS EM CAPTURAS (OTIMIZADO)
+// 4. EFEITO DE PARTÍCULAS EM CAPTURAS
 // ==========================================
 const sharedRingGeo = new THREE.RingGeometry(0.1, 0.25, 20);
 sharedRingGeo.rotateX(-Math.PI / 2);
@@ -973,17 +1088,17 @@ function updateStatusUI(lastSan = null) {
 
     if (game.isCheckmate()) {
         const winner = game.turn() === 'w' ? 'Pretas' : 'Brancas';
-        document.getElementById('ui-status').textContent = `XEQUE-MATE! Vitória das ${winner}!`;
+        document.getElementById('ui-status').textContent = `Xeque-Mate — Vitória das ${winner}`;
     } else if (game.isDraw()) {
-        document.getElementById('ui-status').textContent = 'Empate!';
+        document.getElementById('ui-status').textContent = 'Partida Empatada';
     } else if (game.inCheck()) {
-        document.getElementById('ui-status').textContent = `Vez das ${turn} (XEQUE!)`;
+        document.getElementById('ui-status').textContent = `Vez das ${turn} (Em Xeque)`;
     } else {
         document.getElementById('ui-status').textContent = `Vez das ${turn}`;
     }
 
     if (lastSan) {
-        document.getElementById('ui-lastmove').textContent = `Último lance jogado: ${lastSan}`;
+        document.getElementById('ui-lastmove').textContent = `Último lance: ${lastSan}`;
     }
 }
 
@@ -1140,7 +1255,7 @@ document.getElementById('btn-new').addEventListener('click', () => {
     selectedRingMesh.visible = false;
     clearMoveMarkers();
     rebuildFullSceneFromChessJS();
-    document.getElementById('ui-lastmove').textContent = 'Nova partida iniciada!';
+    document.getElementById('ui-lastmove').textContent = 'Nova partida iniciada.';
 });
 
 document.getElementById('btn-undo').addEventListener('click', () => {
