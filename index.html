@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xadrez 3D Cinematográfico - A Partida da Ópera</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            overflow: hidden;
+            background-color: #0d0f14;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #f0f0f0;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(18, 22, 31, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 12px;
+            padding: 20px;
+            width: 350px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+        #cosmetics-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(18, 22, 31, 0.90);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 12px;
+            padding: 16px;
+            width: 310px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+        .team-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .team-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #d4af37;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .field-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 7px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
+        .field-row select {
+            margin-top: 3px;
+            background: #161b26;
+            color: #fff;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 6px;
+            border-radius: 5px;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+        h1 {
+            font-size: 1.15rem;
+            color: #d4af37;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .subtitle {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        .move-display {
+            background: rgba(0, 0, 0, 0.45);
+            border-left: 3px solid #d4af37;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .move-number {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .move-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            margin-top: 4px;
+        }
+        .move-desc {
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            margin-top: 6px;
+            min-height: 36px;
+            line-height: 1.35;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 9px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background: rgba(212, 175, 55, 0.25);
+            border-color: #d4af37;
+        }
+        button.active {
+            background: #d4af37;
+            color: #0d0f14;
+            border-color: #d4af37;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #ccc;
+            margin-top: 8px;
+            margin-bottom: 16px;
+        }
+        input[type="range"] {
+            width: 58%;
+            accent-color: #d4af37;
+            cursor: pointer;
+        }
+        .play-game-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+            color: #0d0f14;
+            font-weight: 800;
+            font-size: 0.92rem;
+            padding: 12px;
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .play-game-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(212, 175, 55, 0.65);
+        }
+        .cam-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(18, 22, 31, 0.75);
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #bbb;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div id="ui-panel">
+    <h1>Xadrez 3D Realista</h1>
+    <div class="subtitle">Paul Morphy vs. Duque de Brunswick (1858)</div>
+    
+    <div class="move-display">
+        <div class="move-number" id="ui-step">Aguardando Início</div>
+        <div class="move-text" id="ui-notation">Posição Inicial</div>
+        <div class="move-desc" id="ui-desc">A Partida da Ópera: uma obra-prima de ataque, sacrifícios e interação tática.</div>
+    </div>
+
+    <div class="controls">
+        <button id="btn-play" class="active">Pausar</button>
+        <button id="btn-step">Avançar</button>
+        <button id="btn-reset">Reiniciar</button>
+        <button id="btn-cam">Câmera</button>
+    </div>
+
+    <div class="slider-group">
+        <span>Velocidade da Animação:</span>
+        <input type="range" id="speed-slider" min="0.5" max="2.5" step="0.1" value="1.1">
+    </div>
+
+    <a href="jogar.html" class="play-game-btn">▶ Jogar Xadrez 3D Agora</a>
+</div>
+
+<!-- PAINEL DE SKINS E COSMÉTICOS POR TIME -->
+<div id="cosmetics-panel">
+    <h1>🎨 Skins & Cosméticos</h1>
+    <div class="subtitle">Personalize cada exército ao vivo</div>
+
+    <div class="team-box">
+        <div class="team-title">♔ Equipe das Brancas</div>
+        <div class="field-row">
+            <label>Cor / Material (Skin):</label>
+            <select id="skin-w"></select>
+        </div>
+        <div class="field-row">
+            <label>Modelo 3D:</label>
+            <select id="model-w"></select>
+        </div>
+        <div class="field-row">
+            <label>Cosmético / Efeito:</label>
+            <select id="cosmetic-w"></select>
+        </div>
+    </div>
+
+    <div class="team-box" style="margin-bottom: 0;">
+        <div class="team-title">♚ Equipe das Pretas</div>
+        <div class="field-row">
+            <label>Cor / Material (Skin):</label>
+            <select id="skin-b"></select>
+        </div>
+        <div class="field-row">
+            <label>Modelo 3D:</label>
+            <select id="model-b"></select>
+        </div>
+        <div class="field-row">
+            <label>Cosmético / Efeito:</label>
+            <select id="cosmetic-b"></select>
+        </div>
+    </div>
+</div>
+
+<div class="cam-hint">Arraste com o mouse para girar em 360° • Roda do mouse para Zoom</div>
+<div id="canvas-container"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { loadTeamConfig, buildCustomPieceMesh, initCosmeticsUI } from './cosmetics.js';
+
+const teamConfig = loadTeamConfig();
+
+// ==========================================
+// 1. CONFIGURAÇÃO DA CENA, CÂMERA E RENDER
+// ==========================================
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0e14);
+scene.fog = new THREE.FogExp2(0x0c0e14, 0.018);
+
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 14, 16);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.maxPolarAngle = Math.PI / 2 - 0.04;
+controls.minDistance = 6;
+controls.maxDistance = 30;
+controls.target.set(0, 0.5, 0);
+
+// ==========================================
+// 2. ILUMINAÇÃO CINEMATOGRÁFICA
+// ==========================================
+scene.add(new THREE.AmbientLight(0xdbeafe, 0.55));
+
+const mainLight = new THREE.DirectionalLight(0xfff7ed, 2.2);
+mainLight.position.set(10, 18, 12);
+mainLight.castShadow = true;
+mainLight.shadow.mapSize.set(2048, 2048);
+const d = 10;
+mainLight.shadow.camera.left = -d;
+mainLight.shadow.camera.right = d;
+mainLight.shadow.camera.top = d;
+mainLight.shadow.camera.bottom = -d;
+mainLight.shadow.bias = -0.0005;
+scene.add(mainLight);
+
+const rimLight = new THREE.DirectionalLight(0x60a5fa, 0.9);
+rimLight.position.set(-12, 10, -12);
+scene.add(rimLight);
+
+const warmPoint = new THREE.PointLight(0xd4af37, 1.5, 25);
+warmPoint.position.set(0, 8, 0);
+scene.add(warmPoint);
+
+// ==========================================
+// 3. MATERIAIS DO TABULEIRO
+// ==========================================
+const lightSquareMat = new THREE.MeshStandardMaterial({ color: 0xe2d5be, roughness: 0.25, metalness: 0.05 });
+const darkSquareMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.3, metalness: 0.05 });
+const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e1108, roughness: 0.35, metalness: 0.1 });
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.25, metalness: 0.85 });
+
+// ==========================================
+// 4. CONSTRUÇÃO DO TABULEIRO
+// ==========================================
+const SQUARE_SIZE = 1.4;
+const BOARD_OFFSET = (7 * SQUARE_SIZE) / 2;
+
+function coordToWorld(file, rank) {
+    return new THREE.Vector3(
+        file * SQUARE_SIZE - BOARD_OFFSET,
+        0,
+        (7 - rank) * SQUARE_SIZE - BOARD_OFFSET
+    );
+}
+
+const boardGroup = new THREE.Group();
+scene.add(boardGroup);
+
+const squareGeo = new THREE.BoxGeometry(SQUARE_SIZE, 0.3, SQUARE_SIZE);
+for (let file = 0; file < 8; file++) {
+    for (let rank = 0; rank < 8; rank++) {
+        const isLight = (file + rank) % 2 !== 0;
+        const mesh = new THREE.Mesh(squareGeo, isLight ? lightSquareMat : darkSquareMat);
+        const pos = coordToWorld(file, rank);
+        mesh.position.set(pos.x, -0.15, pos.z);
+        mesh.receiveShadow = true;
+        boardGroup.add(mesh);
+    }
+}
+
+const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(8 * SQUARE_SIZE + 1.8, 0.5, 8 * SQUARE_SIZE + 1.8), frameMat);
+frameMesh.position.y = -0.32;
+frameMesh.receiveShadow = true;
+boardGroup.add(frameMesh);
+
+const trimMesh = new THREE.Mesh(new THREE.BoxGeometry(8 * SQUARE_SIZE + 0.3, 0.32, 8 * SQUARE_SIZE + 0.3), goldMat);
+trimMesh.position.y = -0.19;
+boardGroup.add(trimMesh);
+
+const tableMesh = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 0.6, 64), new THREE.MeshStandardMaterial({ color: 0x121318, roughness: 0.6 }));
+tableMesh.position.y = -0.88;
+tableMesh.receiveShadow = true;
+scene.add(tableMesh);
+
+const highlightGeo = new THREE.PlaneGeometry(SQUARE_SIZE * 0.90, SQUARE_SIZE * 0.90);
+highlightGeo.rotateX(-Math.PI / 2);
+
+const fromHighlight = new THREE.Mesh(highlightGeo, new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false }));
+fromHighlight.position.y = 0.015;
+scene.add(fromHighlight);
+
+const toHighlight = new THREE.Mesh(highlightGeo, new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false }));
+toHighlight.position.y = 0.015;
+scene.add(toHighlight);
+
+// ==========================================
+// 5. EFEITO DE PARTÍCULAS EM CAPTURAS
+// ==========================================
+const activeEffects = [];
+
+function spawnCaptureEffect(position) {
+    const ringGeo = new THREE.RingGeometry(0.1, 0.25, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.copy(position);
+    ring.position.y = 0.05;
+    scene.add(ring);
+
+    const sparks = [];
+    const sparkGeo = new THREE.SphereGeometry(0.055, 8, 8);
+    for (let i = 0; i < 18; i++) {
+        const sparkMat = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xfacc15 : 0xffffff, transparent: true });
+        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+        spark.position.copy(position);
+        spark.position.y = 0.4;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 2.8;
+        spark.userData.vel = new THREE.Vector3(Math.cos(angle) * speed, 2.2 + Math.random() * 2.5, Math.sin(angle) * speed);
+        scene.add(spark);
+        sparks.push(spark);
+    }
+
+    activeEffects.push({ ring, sparks, age: 0, duration: 0.75 });
+}
+
+function updateEffects(dt) {
+    for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const eff = activeEffects[i];
+        eff.age += dt;
+        const t = eff.age / eff.duration;
+
+        if (t >= 1) {
+            scene.remove(eff.ring);
+            eff.sparks.forEach(s => scene.remove(s));
+            activeEffects.splice(i, 1);
+            continue;
+        }
+
+        const scale = 1 + t * 5.5;
+        eff.ring.scale.set(scale, scale, scale);
+        eff.ring.material.opacity = (1 - t) * 0.9;
+
+        eff.sparks.forEach(s => {
+            s.position.addScaledVector(s.userData.vel, dt);
+            s.userData.vel.y -= 9.8 * dt;
+            s.material.opacity = 1 - t;
+        });
+    }
+}
+
+// ==========================================
+// 6. GERENCIAMENTO DO ESTADO DO TABULEIRO E SKINS
+// ==========================================
+let boardState = [];
+let allPieces = [];
+let capturedWhiteCount = 0;
+let capturedBlackCount = 0;
+
+function algebraicToCoord(sq) {
+    return {
+        file: sq.charCodeAt(0) - 97,
+        rank: parseInt(sq[1], 10) - 1
+    };
+}
+
+function initBoard() {
+    allPieces.forEach(p => scene.remove(p.mesh));
+    allPieces = [];
+    capturedWhiteCount = 0;
+    capturedBlackCount = 0;
+
+    boardState = Array.from({ length: 8 }, () => Array(8).fill(null));
+    const backRank = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'];
+
+    for (let f = 0; f < 8; f++) {
+        spawnPiece(backRank[f], 'w', f, 0);
+        spawnPiece('P', 'w', f, 1);
+        spawnPiece('P', 'b', f, 6);
+        spawnPiece(backRank[f], 'b', f, 7);
+    }
+
+    fromHighlight.material.opacity = 0;
+    toHighlight.material.opacity = 0;
+}
+
+function spawnPiece(type, color, file, rank) {
+    const mesh = buildCustomPieceMesh(type, color, teamConfig);
+    const pos = coordToWorld(file, rank);
+    mesh.position.copy(pos);
+    scene.add(mesh);
+
+    const pieceObj = { type, color, file, rank, mesh };
+    boardState[file][rank] = pieceObj;
+    allPieces.push(pieceObj);
+}
+
+// Atualiza as peças existentes em tempo real quando o jogador muda a skin/modelo
+function refreshAllPieceSkins() {
+    allPieces.forEach(p => {
+        const oldPos = p.mesh.position.clone();
+        const oldRot = p.mesh.rotation.clone();
+        scene.remove(p.mesh);
+
+        const newMesh = buildCustomPieceMesh(p.type, p.color, teamConfig);
+        newMesh.position.copy(oldPos);
+        newMesh.rotation.copy(oldRot);
+        scene.add(newMesh);
+        p.mesh = newMesh;
+    });
+}
+
+initCosmeticsUI(teamConfig, refreshAllPieceSkins);
+
+// ==========================================
+// 7. LANCES: "A PARTIDA DA ÓPERA"
+// ==========================================
+const OPERA_GAME_MOVES = [
+    { from: 'e2', to: 'e4', san: '1. e4', desc: 'Paul Morphy abre com o Peão do Rei, controlando o centro imediatamente.' },
+    { from: 'e7', to: 'e5', san: '1... e5', desc: 'O Duque de Brunswick e o Conde Isouard respondem simetricamente.' },
+    { from: 'g1', to: 'f3', san: '2. Cf3', desc: 'O Cavalo salta em arco para f3, atacando diretamente o peão central em e5.' },
+    { from: 'd7', to: 'd6', san: '2... d6', desc: 'Defesa Philidor: as Pretas defendem o peão de e5, mas limitam o Bispo de f8.' },
+    { from: 'd2', to: 'd4', san: '3. d4', desc: 'Morphy desafia o centro imediatamente com um segundo peão.' },
+    { from: 'c8', to: 'g4', san: '3... Bg4', desc: 'As Pretas cravam o Cavalo de f3 contra a Dama branca.' },
+    { from: 'd4', to: 'e5', san: '4. dxe5', desc: 'Primeira captura! O peão branco toma em e5 e força uma decisão.' },
+    { from: 'g4', to: 'f3', san: '4... Bxf3', desc: 'Para não perder um peão, o Bispo preto captura o Cavalo em f3.' },
+    { from: 'd1', to: 'f3', san: '5. Qxf3', desc: 'A Dama branca recaptura o Bispo em f3 e desenvolve-se com força.' },
+    { from: 'd6', to: 'e5', san: '5... dxe5', desc: 'O peão preto retoma em e5, estabilizando momentaneamente o centro.' },
+    { from: 'f1', to: 'c4', san: '6. Bc4', desc: 'O Bispo branco desliza até c4, mirando o ponto vulnerável f7 com a Dama!' },
+    { from: 'g8', to: 'f6', san: '6... Cf6', desc: 'O Cavalo preto salta para f6, bloqueando a ameaça de mate em f7.' },
+    { from: 'f3', to: 'b3', san: '7. Db3', desc: 'Ataque duplo! A Dama em b3 pressiona simultaneamente f7 e o peão de b7.' },
+    { from: 'd8', to: 'e7', san: '7... De7', desc: 'A Dama preta move-se para e7 para proteger a casa f7, mas bloqueia seu Bispo.' },
+    { from: 'b1', to: 'c3', san: '8. Cc3', desc: 'Morphy prefere desenvolver o Cavalo com rapidez em vez de capturar b7.' },
+    { from: 'c7', to: 'c6', san: '8... c6', desc: 'As Pretas criam uma barreira sólida para defender b7.' },
+    { from: 'c1', to: 'g5', san: '9. Bg5', desc: 'Todas as peças menores brancas estão ativas! O Bispo crava o Cavalo de f6.' },
+    { from: 'b7', to: 'b5', san: '9... b5', desc: 'As Pretas tentam expulsar o perigoso Bispo branco de c4.' },
+    { from: 'c3', to: 'b5', san: '10. Cxb5!', desc: 'Sacrifício brilhante de Cavalo! Morphy destrói a muralha de peões preta.' },
+    { from: 'c6', to: 'b5', san: '10... cxb5', desc: 'O peão preto aceita o sacrifício e captura o Cavalo em b5.' },
+    { from: 'c4', to: 'b5', san: '11. Bxb5+', desc: 'O Bispo captura em b5 dando Xeque ao Rei preto!' },
+    { from: 'b8', to: 'd7', san: '11... Nbd7', desc: 'O Cavalo preto interpõe-se em d7, mas fica totalmente cravado.' },
+    { from: 'e1', to: 'g1', san: '12. O-O-O', castle: { rookFrom: 'a1', rookTo: 'd1', kingFrom: 'e1', kingTo: 'c1' }, desc: 'Roque Grande! Rei e Torre movem-se juntos, colocando a Torre de d1 na coluna aberta!' },
+    { from: 'a8', to: 'd8', san: '12... Td8', desc: 'A Torre preta corre para d8 para tentar defender o Cavalo cravado em d7.' },
+    { from: 'd1', to: 'd7', san: '13. Txd7!', desc: 'Sacrifício de qualidade! A Torre branca elimina o defensor em d7.' },
+    { from: 'd8', to: 'd7', san: '13... Txd7', desc: 'A Torre preta recaptura em d7, mas também fica cravada pelo Bispo de b5.' },
+    { from: 'h1', to: 'd1', san: '14. Td1', desc: 'A última peça branca entra na batalha, dobrando a pressão sobre d7!' },
+    { from: 'e7', to: 'e6', san: '14... De6', desc: 'As Pretas tentam aliviar a pressão propondo a troca das Damas.' },
+    { from: 'b5', to: 'd7', san: '15. Bxd7+', desc: 'O Bispo captura a Torre em d7 com Xeque!' },
+    { from: 'f6', to: 'd7', san: '15... Cxd7', desc: 'O Cavalo preto é forçado a capturar em d7, deixando a casa d8 desprotegida.' },
+    { from: 'b3', to: 'b8', san: '16. Db8+!!', desc: 'Sacrifício de Dama imortal! A Dama entrega-se em b8 para atrair o Cavalo!' },
+    { from: 'd7', to: 'b8', san: '16... Cxb8', desc: 'O Cavalo preto é obrigado a capturar a Dama branca em b8.' },
+    { from: 'd1', to: 'd8', san: '17. Td8#', desc: 'XEQUE-MATE! A Torre desliza até d8, protegida pelo Bispo de g5!' }
+];
+
+// ==========================================
+// 8. ANIMAÇÃO DE LANCES
+// ==========================================
+let currentMoveIndex = 0;
+let activeAnimation = null;
+let isPlaying = true;
+let playbackSpeed = 1.1;
+let pauseTimer = 1.2;
+
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function getGraveyardPos(color, index) {
+    const col = Math.floor(index / 8);
+    const row = index % 8;
+    const xSide = color === 'w' ? -7.2 - col * 1.1 : 7.2 + col * 1.1;
+    const zPos = (row - 3.5) * 1.15;
+    return new THREE.Vector3(xSide, 0, zPos);
+}
+
+function startNextMove() {
+    if (currentMoveIndex >= OPERA_GAME_MOVES.length) {
+        isPlaying = false;
+        document.getElementById('btn-play').textContent = 'Concluído';
+        document.getElementById('btn-play').classList.remove('active');
+        return;
+    }
+
+    const moveData = OPERA_GAME_MOVES[currentMoveIndex];
+    currentMoveIndex++;
+
+    document.getElementById('ui-step').textContent = `Lance ${currentMoveIndex} de ${OPERA_GAME_MOVES.length}`;
+    document.getElementById('ui-notation').textContent = moveData.san;
+    document.getElementById('ui-desc').textContent = moveData.desc;
+
+    if (moveData.castle) {
+        const kFrom = algebraicToCoord(moveData.castle.kingFrom);
+        const kTo = algebraicToCoord(moveData.castle.kingTo);
+        const rFrom = algebraicToCoord(moveData.castle.rookFrom);
+        const rTo = algebraicToCoord(moveData.castle.rookTo);
+
+        const kingPiece = boardState[kFrom.file][kFrom.rank];
+        const rookPiece = boardState[rFrom.file][rFrom.rank];
+
+        boardState[kFrom.file][kFrom.rank] = null;
+        boardState[rFrom.file][rFrom.rank] = null;
+        boardState[kTo.file][kTo.rank] = kingPiece;
+        boardState[rTo.file][rTo.rank] = rookPiece;
+        kingPiece.file = kTo.file; kingPiece.rank = kTo.rank;
+        rookPiece.file = rTo.file; rookPiece.rank = rTo.rank;
+
+        const kStart = kingPiece.mesh.position.clone();
+        const kEnd = coordToWorld(kTo.file, kTo.rank);
+        const rStart = rookPiece.mesh.position.clone();
+        const rEnd = coordToWorld(rTo.file, rTo.rank);
+
+        fromHighlight.position.set(kStart.x, 0.015, kStart.z);
+        toHighlight.position.set(kEnd.x, 0.015, kEnd.z);
+        fromHighlight.material.opacity = 0.45;
+        toHighlight.material.opacity = 0.55;
+
+        activeAnimation = {
+            type: 'castle',
+            progress: 0,
+            duration: 1.25,
+            kingPiece, kStart, kEnd,
+            rookPiece, rStart, rEnd
+        };
+        return;
+    }
+
+    const fromCoord = algebraicToCoord(moveData.from);
+    const toCoord = algebraicToCoord(moveData.to);
+
+    const piece = boardState[fromCoord.file][fromCoord.rank];
+    const capturedPiece = boardState[toCoord.file][toCoord.rank];
+
+    boardState[fromCoord.file][fromCoord.rank] = null;
+    boardState[toCoord.file][toCoord.rank] = piece;
+    piece.file = toCoord.file;
+    piece.rank = toCoord.rank;
+
+    const startPos = piece.mesh.position.clone();
+    const endPos = coordToWorld(toCoord.file, toCoord.rank);
+
+    fromHighlight.position.set(startPos.x, 0.015, startPos.z);
+    toHighlight.position.set(endPos.x, 0.015, endPos.z);
+    fromHighlight.material.opacity = 0.45;
+    toHighlight.material.opacity = 0.55;
+
+    let gravePos = null;
+    if (capturedPiece) {
+        if (capturedPiece.color === 'w') {
+            gravePos = getGraveyardPos('w', capturedWhiteCount++);
+        } else {
+            gravePos = getGraveyardPos('b', capturedBlackCount++);
+        }
+    }
+
+    const arcHeight = piece.type === 'N' ? 2.1 : 0.35;
+
+    activeAnimation = {
+        type: 'standard',
+        progress: 0,
+        duration: capturedPiece ? 1.35 : 0.95,
+        piece,
+        startPos,
+        endPos,
+        arcHeight,
+        capturedPiece,
+        gravePos,
+        impactTriggered: false
+    };
+}
+
+function updateAnimation(dt) {
+    if (!activeAnimation) {
+        if (isPlaying) {
+            pauseTimer -= dt * playbackSpeed;
+            if (pauseTimer <= 0) {
+                startNextMove();
+            }
+        }
+        return;
+    }
+
+    activeAnimation.progress += (dt * playbackSpeed) / activeAnimation.duration;
+    const rawT = Math.min(activeAnimation.progress, 1);
+    const e = easeInOutCubic(rawT);
+
+    if (activeAnimation.type === 'castle') {
+        const { kingPiece, kStart, kEnd, rookPiece, rStart, rEnd } = activeAnimation;
+        kingPiece.mesh.position.lerpVectors(kStart, kEnd, e);
+        kingPiece.mesh.position.y = Math.sin(e * Math.PI) * 0.25;
+
+        rookPiece.mesh.position.lerpVectors(rStart, rEnd, e);
+        rookPiece.mesh.position.y = Math.sin(e * Math.PI) * 0.95;
+    } 
+    else {
+        const { piece, startPos, endPos, arcHeight, capturedPiece, gravePos } = activeAnimation;
+
+        piece.mesh.position.lerpVectors(startPos, endPos, e);
+        piece.mesh.position.y = Math.sin(e * Math.PI) * arcHeight;
+
+        const dir = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+        const tiltAngle = Math.sin(e * Math.PI) * 0.16;
+        piece.mesh.rotation.x = dir.z * tiltAngle;
+        piece.mesh.rotation.z = -dir.x * tiltAngle;
+
+        if (capturedPiece) {
+            if (rawT >= 0.52 && !activeAnimation.impactTriggered) {
+                activeAnimation.impactTriggered = true;
+                spawnCaptureEffect(endPos);
+            }
+
+            if (rawT >= 0.52) {
+                const capT = easeInOutCubic((rawT - 0.52) / 0.48);
+                capturedPiece.mesh.position.lerpVectors(endPos, gravePos, capT);
+                capturedPiece.mesh.position.y = Math.sin(capT * Math.PI) * 1.8;
+                capturedPiece.mesh.rotation.z = Math.sin(capT * Math.PI) * 0.85;
+                capturedPiece.mesh.rotation.x = Math.sin(capT * Math.PI) * 0.55;
+            }
+        }
+    }
+
+    if (rawT >= 1) {
+        if (activeAnimation.piece) {
+            activeAnimation.piece.mesh.position.copy(activeAnimation.endPos);
+            activeAnimation.piece.mesh.rotation.set(0, 0, 0);
+        }
+        if (activeAnimation.capturedPiece) {
+            activeAnimation.capturedPiece.mesh.position.copy(activeAnimation.gravePos);
+            activeAnimation.capturedPiece.mesh.rotation.set(0, 0, 0);
+        }
+        activeAnimation = null;
+        pauseTimer = 0.65;
+    }
+}
+
+// ==========================================
+// 9. CONTROLES DE INTERFACE
+// ==========================================
+let autoOrbitCamera = true;
+let cameraAngle = 0.4;
+
+document.getElementById('btn-play').addEventListener('click', (e) => {
+    if (currentMoveIndex >= OPERA_GAME_MOVES.length) {
+        initBoard();
+        currentMoveIndex = 0;
+    }
+    isPlaying = !isPlaying;
+    e.target.textContent = isPlaying ? 'Pausar' : 'Reproduzir';
+    e.target.classList.toggle('active', isPlaying);
+});
+
+document.getElementById('btn-step').addEventListener('click', () => {
+    isPlaying = false;
+    const playBtn = document.getElementById('btn-play');
+    playBtn.textContent = 'Reproduzir';
+    playBtn.classList.remove('active');
+
+    if (!activeAnimation && currentMoveIndex < OPERA_GAME_MOVES.length) {
+        startNextMove();
+    }
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+    activeAnimation = null;
+    currentMoveIndex = 0;
+    initBoard();
+    isPlaying = true;
+    pauseTimer = 0.8;
+    const playBtn = document.getElementById('btn-play');
+    playBtn.textContent = 'Pausar';
+    playBtn.classList.add('active');
+    document.getElementById('ui-step').textContent = 'Reiniciado';
+    document.getElementById('ui-notation').textContent = 'Posição Inicial';
+    document.getElementById('ui-desc').textContent = 'A Partida da Ópera: pronta para iniciar.';
+});
+
+let camPreset = 0;
+document.getElementById('btn-cam').addEventListener('click', () => {
+    camPreset = (camPreset + 1) % 4;
+    autoOrbitCamera = (camPreset === 0);
+    if (camPreset === 1) {
+        camera.position.set(0, 12, 15);
+    } else if (camPreset === 2) {
+        camera.position.set(0, 12, -15);
+    } else if (camPreset === 3) {
+        camera.position.set(0, 21, 0.01);
+    }
+});
+
+renderer.domElement.addEventListener('pointerdown', () => {
+    autoOrbitCamera = false;
+});
+
+document.getElementById('speed-slider').addEventListener('input', (e) => {
+    playbackSpeed = parseFloat(e.target.value);
+});
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+initBoard();
+const clock = new THREE.Clock();
+
+function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.1);
+
+    updateAnimation(dt);
+    updateEffects(dt);
+
+    if (autoOrbitCamera) {
+        cameraAngle += dt * 0.12;
+        camera.position.x = Math.sin(cameraAngle) * 16.5;
+        camera.position.z = Math.cos(cameraAngle) * 16.5;
+        camera.position.y = 11.5 + Math.sin(cameraAngle * 0.5) * 2.0;
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+animate();
+</script>
+</body>
+</html>

@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogar Xadrez 3D - Modo Interativo Cinematográfico</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            overflow: hidden;
+            background-color: #0d0f14;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #f0f0f0;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(18, 22, 31, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 12px;
+            padding: 20px;
+            width: 350px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+        #cosmetics-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(18, 22, 31, 0.90);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 12px;
+            padding: 16px;
+            width: 310px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+        .team-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .team-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #d4af37;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .field-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 7px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
+        .field-row select {
+            margin-top: 3px;
+            background: #161b26;
+            color: #fff;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 6px;
+            border-radius: 5px;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+        h1 {
+            font-size: 1.15rem;
+            color: #d4af37;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .subtitle {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        .status-box {
+            background: rgba(0, 0, 0, 0.45);
+            border-left: 3px solid #d4af37;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 14px;
+        }
+        .turn-badge {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+        .status-text {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 4px;
+        }
+        .last-move {
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            margin-top: 6px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        button, select {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 9px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        select option {
+            background: #12161f;
+            color: #fff;
+        }
+        button:hover, select:hover {
+            background: rgba(212, 175, 55, 0.25);
+            border-color: #d4af37;
+        }
+        .mode-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #ccc;
+            margin-top: 4px;
+            margin-bottom: 14px;
+        }
+        input[type="range"] {
+            width: 55%;
+            accent-color: #d4af37;
+            cursor: pointer;
+        }
+        .back-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            color: #d4af37;
+            font-weight: 700;
+            font-size: 0.82rem;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .back-btn:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+        .cam-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(18, 22, 31, 0.75);
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #bbb;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "chess.js": "https://unpkg.com/chess.js@1.0.0-beta.8/dist/esm/chess.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div id="ui-panel">
+    <h1>Xadrez 3D Jogável</h1>
+    <div class="subtitle">Clique em uma peça e depois na casa de destino</div>
+
+    <div class="status-box">
+        <div class="turn-badge" id="ui-turn">Turno Atual</div>
+        <div class="status-text" id="ui-status">Vez das Brancas</div>
+        <div class="last-move" id="ui-lastmove">Selecione uma peça branca para começar.</div>
+    </div>
+
+    <div class="mode-group">
+        <label for="game-mode">Modo de Jogo:</label>
+        <select id="game-mode">
+            <option value="ai">1 Jogador (Brancas) vs. IA (Pretas)</option>
+            <option value="pvp">2 Jogadores Locais (Brancas vs. Pretas)</option>
+        </select>
+    </div>
+
+    <div class="controls">
+        <button id="btn-new">Nova Partida</button>
+        <button id="btn-undo">Desfazer Lance</button>
+        <button id="btn-cam-w">Visão Brancas</button>
+        <button id="btn-cam-b">Visão Pretas</button>
+    </div>
+
+    <div class="slider-group">
+        <span>Velocidade da Animação:</span>
+        <input type="range" id="speed-slider" min="0.6" max="2.5" step="0.1" value="1.2">
+    </div>
+
+    <a href="index.html" class="back-btn">⬅ Voltar para A Partida da Ópera</a>
+</div>
+
+<!-- PAINEL DE SKINS E COSMÉTICOS POR TIME -->
+<div id="cosmetics-panel">
+    <h1>🎨 Skins & Cosméticos</h1>
+    <div class="subtitle">Escolha o visual de cada time</div>
+
+    <div class="team-box">
+        <div class="team-title">♔ Equipe das Brancas</div>
+        <div class="field-row">
+            <label>Cor / Material (Skin):</label>
+            <select id="skin-w"></select>
+        </div>
+        <div class="field-row">
+            <label>Modelo 3D:</label>
+            <select id="model-w"></select>
+        </div>
+        <div class="field-row">
+            <label>Cosmético / Efeito:</label>
+            <select id="cosmetic-w"></select>
+        </div>
+    </div>
+
+    <div class="team-box" style="margin-bottom: 0;">
+        <div class="team-title">♚ Equipe das Pretas</div>
+        <div class="field-row">
+            <label>Cor / Material (Skin):</label>
+            <select id="skin-b"></select>
+        </div>
+        <div class="field-row">
+            <label>Modelo 3D:</label>
+            <select id="model-b"></select>
+        </div>
+        <div class="field-row">
+            <label>Cosmético / Efeito:</label>
+            <select id="cosmetic-b"></select>
+        </div>
+    </div>
+</div>
+
+<div class="cam-hint">Clique Esquerdo: Selecionar / Mover Peça • Arrastar: Girar Câmera</div>
+<div id="canvas-container"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Chess } from 'chess.js';
+import { loadTeamConfig, buildCustomPieceMesh, initCosmeticsUI } from './cosmetics.js';
+
+const teamConfig = loadTeamConfig();
+
+// ==========================================
+// 1. CENA, CÂMERA E RENDERIZADOR
+// ==========================================
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0e14);
+scene.fog = new THREE.FogExp2(0x0c0e14, 0.018);
+
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 13.5, 14.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.maxPolarAngle = Math.PI / 2 - 0.04;
+controls.minDistance = 6;
+controls.maxDistance = 30;
+controls.target.set(0, 0.4, 0);
+
+// ==========================================
+// 2. ILUMINAÇÃO CINEMATOGRÁFICA E MATERIAIS
+// ==========================================
+scene.add(new THREE.AmbientLight(0xdbeafe, 0.55));
+
+const mainLight = new THREE.DirectionalLight(0xfff7ed, 2.2);
+mainLight.position.set(10, 18, 12);
+mainLight.castShadow = true;
+mainLight.shadow.mapSize.set(2048, 2048);
+const d = 10;
+mainLight.shadow.camera.left = -d;
+mainLight.shadow.camera.right = d;
+mainLight.shadow.camera.top = d;
+mainLight.shadow.camera.bottom = -d;
+mainLight.shadow.bias = -0.0005;
+scene.add(mainLight);
+
+const rimLight = new THREE.DirectionalLight(0x60a5fa, 0.9);
+rimLight.position.set(-12, 10, -12);
+scene.add(rimLight);
+
+const warmPoint = new THREE.PointLight(0xd4af37, 1.5, 25);
+warmPoint.position.set(0, 8, 0);
+scene.add(warmPoint);
+
+const lightSquareMat = new THREE.MeshStandardMaterial({ color: 0xe2d5be, roughness: 0.25, metalness: 0.05 });
+const darkSquareMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.3, metalness: 0.05 });
+const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e1108, roughness: 0.35, metalness: 0.1 });
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.25, metalness: 0.85 });
+
+// ==========================================
+// 3. TABULEIRO, CASAS CLICÁVEIS E DESTAQUES
+// ==========================================
+const SQUARE_SIZE = 1.4;
+const BOARD_OFFSET = (7 * SQUARE_SIZE) / 2;
+
+function coordToWorld(file, rank) {
+    return new THREE.Vector3(
+        file * SQUARE_SIZE - BOARD_OFFSET,
+        0,
+        (7 - rank) * SQUARE_SIZE - BOARD_OFFSET
+    );
+}
+
+function fileRankToAlgebraic(file, rank) {
+    return String.fromCharCode(97 + file) + (rank + 1);
+}
+
+function algebraicToCoord(sq) {
+    return {
+        file: sq.charCodeAt(0) - 97,
+        rank: parseInt(sq[1], 10) - 1
+    };
+}
+
+const boardGroup = new THREE.Group();
+scene.add(boardGroup);
+
+const squareGeo = new THREE.BoxGeometry(SQUARE_SIZE, 0.3, SQUARE_SIZE);
+const interactiveSquares = [];
+
+for (let file = 0; file < 8; file++) {
+    for (let rank = 0; rank < 8; rank++) {
+        const isLight = (file + rank) % 2 !== 0;
+        const mesh = new THREE.Mesh(squareGeo, isLight ? lightSquareMat : darkSquareMat);
+        const pos = coordToWorld(file, rank);
+        mesh.position.set(pos.x, -0.15, pos.z);
+        mesh.receiveShadow = true;
+        mesh.userData = { square: fileRankToAlgebraic(file, rank), file, rank };
+        boardGroup.add(mesh);
+        interactiveSquares.push(mesh);
+    }
+}
+
+const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(8 * SQUARE_SIZE + 1.8, 0.5, 8 * SQUARE_SIZE + 1.8), frameMat);
+frameMesh.position.y = -0.32;
+frameMesh.receiveShadow = true;
+boardGroup.add(frameMesh);
+
+const trimMesh = new THREE.Mesh(new THREE.BoxGeometry(8 * SQUARE_SIZE + 0.3, 0.32, 8 * SQUARE_SIZE + 0.3), goldMat);
+trimMesh.position.y = -0.19;
+boardGroup.add(trimMesh);
+
+const tableMesh = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 0.6, 64), new THREE.MeshStandardMaterial({ color: 0x121318, roughness: 0.6 }));
+tableMesh.position.y = -0.88;
+tableMesh.receiveShadow = true;
+scene.add(tableMesh);
+
+// Destaques de origem e destino do último lance (idênticos ao index.html)
+const highlightGeo = new THREE.PlaneGeometry(SQUARE_SIZE * 0.90, SQUARE_SIZE * 0.90);
+highlightGeo.rotateX(-Math.PI / 2);
+
+const fromHighlight = new THREE.Mesh(highlightGeo, new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false }));
+fromHighlight.position.y = 0.015;
+scene.add(fromHighlight);
+
+const toHighlight = new THREE.Mesh(highlightGeo, new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false }));
+toHighlight.position.y = 0.015;
+scene.add(toHighlight);
+
+// ==========================================
+// 4. EFEITO DE PARTÍCULAS EM CAPTURAS
+// ==========================================
+const activeEffects = [];
+
+function spawnCaptureEffect(position) {
+    const ringGeo = new THREE.RingGeometry(0.1, 0.25, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.copy(position);
+    ring.position.y = 0.05;
+    scene.add(ring);
+
+    const sparks = [];
+    const sparkGeo = new THREE.SphereGeometry(0.055, 8, 8);
+    for (let i = 0; i < 18; i++) {
+        const sparkMat = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xfacc15 : 0xffffff, transparent: true });
+        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+        spark.position.copy(position);
+        spark.position.y = 0.4;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 2.8;
+        spark.userData.vel = new THREE.Vector3(Math.cos(angle) * speed, 2.2 + Math.random() * 2.5, Math.sin(angle) * speed);
+        scene.add(spark);
+        sparks.push(spark);
+    }
+
+    activeEffects.push({ ring, sparks, age: 0, duration: 0.75 });
+}
+
+function updateEffects(dt) {
+    for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const eff = activeEffects[i];
+        eff.age += dt;
+        const t = eff.age / eff.duration;
+
+        if (t >= 1) {
+            scene.remove(eff.ring);
+            eff.sparks.forEach(s => scene.remove(s));
+            activeEffects.splice(i, 1);
+            continue;
+        }
+
+        const scale = 1 + t * 5.5;
+        eff.ring.scale.set(scale, scale, scale);
+        eff.ring.material.opacity = (1 - t) * 0.9;
+
+        eff.sparks.forEach(s => {
+            s.position.addScaledVector(s.userData.vel, dt);
+            s.userData.vel.y -= 9.8 * dt;
+            s.material.opacity = 1 - t;
+        });
+    }
+}
+
+// ==========================================
+// 5. ESTADO DO TABULEIRO 3D, CEMITÉRIO E ANIMAÇÕES
+// ==========================================
+const game = new Chess();
+let boardState = Array.from({ length: 8 }, () => Array(8).fill(null));
+let allPieces = [];
+let capturedWhiteCount = 0;
+let capturedBlackCount = 0;
+
+let activeAnimation = null;
+let playbackSpeed = 1.2;
+
+let selectedSquare = null;
+let legalMovesForSelected = [];
+let moveMarkers = [];
+
+const selectedRingGeo = new THREE.RingGeometry(0.45, 0.58, 32);
+selectedRingGeo.rotateX(-Math.PI / 2);
+const selectedRingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false });
+const selectedRingMesh = new THREE.Mesh(selectedRingGeo, selectedRingMat);
+selectedRingMesh.position.y = 0.02;
+selectedRingMesh.visible = false;
+scene.add(selectedRingMesh);
+
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function getGraveyardPos(color, index) {
+    const col = Math.floor(index / 8);
+    const row = index % 8;
+    const xSide = color === 'w' ? -7.2 - col * 1.1 : 7.2 + col * 1.1;
+    const zPos = (row - 3.5) * 1.15;
+    return new THREE.Vector3(xSide, 0, zPos);
+}
+
+function setPieceSquareTag(mesh, sq) {
+    mesh.traverse(child => {
+        if (child.isMesh) {
+            child.userData.square = sq;
+        }
+    });
+}
+
+function clearMoveMarkers() {
+    moveMarkers.forEach(m => scene.remove(m));
+    moveMarkers = [];
+}
+
+function showMoveMarkers(moves) {
+    clearMoveMarkers();
+    moves.forEach(m => {
+        const { file, rank } = algebraicToCoord(m.to);
+        const pos = coordToWorld(file, rank);
+        const isCapture = m.captured || m.flags.includes('e');
+
+        const geo = isCapture
+            ? new THREE.RingGeometry(0.42, 0.58, 32)
+            : new THREE.CircleGeometry(0.24, 24);
+        geo.rotateX(-Math.PI / 2);
+
+        const mat = new THREE.MeshBasicMaterial({
+            color: isCapture ? 0xef4444 : 0x22c55e,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+
+        const marker = new THREE.Mesh(geo, mat);
+        marker.position.set(pos.x, 0.02, pos.z);
+        scene.add(marker);
+        moveMarkers.push(marker);
+    });
+}
+
+function spawnPieceOnBoard(type, color, file, rank) {
+    const mesh = buildCustomPieceMesh(type, color, teamConfig);
+    const pos = coordToWorld(file, rank);
+    mesh.position.copy(pos);
+    const sq = fileRankToAlgebraic(file, rank);
+    setPieceSquareTag(mesh, sq);
+    scene.add(mesh);
+
+    const pieceObj = { type: type.toUpperCase(), color, file, rank, mesh, captured: false };
+    boardState[file][rank] = pieceObj;
+    allPieces.push(pieceObj);
+    return pieceObj;
+}
+
+// Reconstrói o tabuleiro inteiro e o cemitério (usado ao iniciar partida ou desfazer lance)
+function rebuildFullSceneFromChessJS() {
+    activeAnimation = null;
+    allPieces.forEach(p => scene.remove(p.mesh));
+    allPieces = [];
+    boardState = Array.from({ length: 8 }, () => Array(8).fill(null));
+    capturedWhiteCount = 0;
+    capturedBlackCount = 0;
+
+    const initialCounts = { w: { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 }, b: { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 } };
+    const currentCounts = { w: { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 } };
+
+    const board = game.board();
+    for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+            const cell = board[7 - r][f];
+            if (cell) {
+                spawnPieceOnBoard(cell.type, cell.color, f, r);
+                if (currentCounts[cell.color][cell.type] !== undefined) {
+                    currentCounts[cell.color][cell.type]++;
+                }
+            }
+        }
+    }
+
+    // Recria no cemitério as peças já capturadas caso o jogador use o botão Desfazer
+    ['w', 'b'].forEach(col => {
+        Object.keys(initialCounts[col]).forEach(type => {
+            const missing = Math.max(0, initialCounts[col][type] - currentCounts[col][type]);
+            for (let i = 0; i < missing; i++) {
+                const mesh = buildCustomPieceMesh(type, col, teamConfig);
+                const gravePos = col === 'w'
+                    ? getGraveyardPos('w', capturedWhiteCount++)
+                    : getGraveyardPos('b', capturedBlackCount++);
+                mesh.position.copy(gravePos);
+                setPieceSquareTag(mesh, null);
+                scene.add(mesh);
+                allPieces.push({ type: type.toUpperCase(), color: col, file: -1, rank: -1, mesh, captured: true });
+            }
+        });
+    });
+
+    const history = game.history({ verbose: true });
+    if (history.length > 0) {
+        const last = history[history.length - 1];
+        const fCoord = algebraicToCoord(last.from);
+        const tCoord = algebraicToCoord(last.to);
+        const fPos = coordToWorld(fCoord.file, fCoord.rank);
+        const tPos = coordToWorld(tCoord.file, tCoord.rank);
+        fromHighlight.position.set(fPos.x, 0.015, fPos.z);
+        toHighlight.position.set(tPos.x, 0.015, tPos.z);
+        fromHighlight.material.opacity = 0.45;
+        toHighlight.material.opacity = 0.55;
+        updateStatusUI(last.san);
+    } else {
+        fromHighlight.material.opacity = 0;
+        toHighlight.material.opacity = 0;
+        updateStatusUI();
+    }
+}
+
+// Atualiza as skins em tempo real sem perder a posição das peças na mesa ou no cemitério
+function refreshAllPieceSkins() {
+    allPieces.forEach(p => {
+        const oldPos = p.mesh.position.clone();
+        const oldRot = p.mesh.rotation.clone();
+        scene.remove(p.mesh);
+
+        const newMesh = buildCustomPieceMesh(p.type, p.color, teamConfig);
+        newMesh.position.copy(oldPos);
+        newMesh.rotation.copy(oldRot);
+
+        if (!p.captured && p.file >= 0 && p.rank >= 0) {
+            setPieceSquareTag(newMesh, fileRankToAlgebraic(p.file, p.rank));
+        } else {
+            setPieceSquareTag(newMesh, null);
+        }
+
+        scene.add(newMesh);
+        p.mesh = newMesh;
+    });
+}
+
+initCosmeticsUI(teamConfig, refreshAllPieceSkins);
+
+// Dispara a animação dinâmica idêntica à demonstração para qualquer lance executado
+function executeAnimatedMove(moveResult, onCompleteCallback) {
+    const fromCoord = algebraicToCoord(moveResult.from);
+    const toCoord = algebraicToCoord(moveResult.to);
+
+    // Verifica se o lance foi Roque (Rei + Torre movendo juntos)
+    if (moveResult.flags.includes('k') || moveResult.flags.includes('q')) {
+        const isKingside = moveResult.flags.includes('k');
+        const rank = fromCoord.rank;
+        const rookFromFile = isKingside ? 7 : 0;
+        const rookToFile = isKingside ? 5 : 3;
+
+        const kingPiece = boardState[fromCoord.file][rank];
+        const rookPiece = boardState[rookFromFile][rank];
+
+        boardState[fromCoord.file][rank] = null;
+        boardState[rookFromFile][rank] = null;
+        boardState[toCoord.file][rank] = kingPiece;
+        boardState[rookToFile][rank] = rookPiece;
+
+        kingPiece.file = toCoord.file; kingPiece.rank = rank;
+        rookPiece.file = rookToFile; rookPiece.rank = rank;
+
+        setPieceSquareTag(kingPiece.mesh, fileRankToAlgebraic(toCoord.file, rank));
+        setPieceSquareTag(rookPiece.mesh, fileRankToAlgebraic(rookToFile, rank));
+
+        const kStart = kingPiece.mesh.position.clone();
+        const kEnd = coordToWorld(toCoord.file, rank);
+        const rStart = rookPiece.mesh.position.clone();
+        const rEnd = coordToWorld(rookToFile, rank);
+
+        fromHighlight.position.set(kStart.x, 0.015, kStart.z);
+        toHighlight.position.set(kEnd.x, 0.015, kEnd.z);
+        fromHighlight.material.opacity = 0.45;
+        toHighlight.material.opacity = 0.55;
+
+        activeAnimation = {
+            type: 'castle',
+            progress: 0,
+            duration: 1.25,
+            kingPiece, kStart, kEnd,
+            rookPiece, rStart, rEnd,
+            onComplete: onCompleteCallback
+        };
+        return;
+    }
+
+    // Movimento padrão, Captura, En Passant ou Promoção
+    const piece = boardState[fromCoord.file][fromCoord.rank];
+    let capturedPiece = null;
+
+    if (moveResult.flags.includes('e')) {
+        // Captura En Passant: o peão capturado está na mesma coluna de destino, mas na fileira de origem
+        capturedPiece = boardState[toCoord.file][fromCoord.rank];
+        boardState[toCoord.file][fromCoord.rank] = null;
+    } else {
+        capturedPiece = boardState[toCoord.file][toCoord.rank];
+    }
+
+    boardState[fromCoord.file][fromCoord.rank] = null;
+    boardState[toCoord.file][toCoord.rank] = piece;
+    piece.file = toCoord.file;
+    piece.rank = toCoord.rank;
+    setPieceSquareTag(piece.mesh, moveResult.to);
+
+    const startPos = piece.mesh.position.clone();
+    const endPos = coordToWorld(toCoord.file, toCoord.rank);
+
+    fromHighlight.position.set(startPos.x, 0.015, startPos.z);
+    toHighlight.position.set(endPos.x, 0.015, endPos.z);
+    fromHighlight.material.opacity = 0.45;
+    toHighlight.material.opacity = 0.55;
+
+    let gravePos = null;
+    let capStartPos = null;
+    if (capturedPiece) {
+        capturedPiece.captured = true;
+        capturedPiece.file = -1;
+        capturedPiece.rank = -1;
+        setPieceSquareTag(capturedPiece.mesh, null);
+        capStartPos = capturedPiece.mesh.position.clone();
+
+        if (capturedPiece.color === 'w') {
+            gravePos = getGraveyardPos('w', capturedWhiteCount++);
+        } else {
+            gravePos = getGraveyardPos('b', capturedBlackCount++);
+        }
+    }
+
+    const arcHeight = piece.type === 'N' ? 2.1 : 0.35;
+
+    activeAnimation = {
+        type: 'standard',
+        progress: 0,
+        duration: capturedPiece ? 1.35 : 0.95,
+        piece,
+        startPos,
+        endPos,
+        arcHeight,
+        capturedPiece,
+        capStartPos,
+        gravePos,
+        impactTriggered: false,
+        promotion: moveResult.promotion ? moveResult.promotion.toUpperCase() : null,
+        onComplete: onCompleteCallback
+    };
+}
+
+function updateAnimation(dt) {
+    if (!activeAnimation) return;
+
+    activeAnimation.progress += (dt * playbackSpeed) / activeAnimation.duration;
+    const rawT = Math.min(activeAnimation.progress, 1);
+    const e = easeInOutCubic(rawT);
+
+    if (activeAnimation.type === 'castle') {
+        const { kingPiece, kStart, kEnd, rookPiece, rStart, rEnd } = activeAnimation;
+        kingPiece.mesh.position.lerpVectors(kStart, kEnd, e);
+        kingPiece.mesh.position.y = Math.sin(e * Math.PI) * 0.25;
+
+        rookPiece.mesh.position.lerpVectors(rStart, rEnd, e);
+        rookPiece.mesh.position.y = Math.sin(e * Math.PI) * 0.95;
+    } else {
+        const { piece, startPos, endPos, arcHeight, capturedPiece, capStartPos, gravePos } = activeAnimation;
+
+        piece.mesh.position.lerpVectors(startPos, endPos, e);
+        piece.mesh.position.y = Math.sin(e * Math.PI) * arcHeight;
+
+        const dir = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+        const tiltAngle = Math.sin(e * Math.PI) * 0.16;
+        piece.mesh.rotation.x = dir.z * tiltAngle;
+        piece.mesh.rotation.z = -dir.x * tiltAngle;
+
+        if (capturedPiece) {
+            if (rawT >= 0.52 && !activeAnimation.impactTriggered) {
+                activeAnimation.impactTriggered = true;
+                spawnCaptureEffect(capStartPos);
+            }
+
+            if (rawT >= 0.52) {
+                const capT = easeInOutCubic((rawT - 0.52) / 0.48);
+                capturedPiece.mesh.position.lerpVectors(capStartPos, gravePos, capT);
+                capturedPiece.mesh.position.y = Math.sin(capT * Math.PI) * 1.8;
+                capturedPiece.mesh.rotation.z = Math.sin(capT * Math.PI) * 0.85;
+                capturedPiece.mesh.rotation.x = Math.sin(capT * Math.PI) * 0.55;
+            }
+        }
+    }
+
+    if (rawT >= 1) {
+        if (activeAnimation.type === 'castle') {
+            activeAnimation.kingPiece.mesh.position.copy(activeAnimation.kEnd);
+            activeAnimation.rookPiece.mesh.position.copy(activeAnimation.rEnd);
+        } else {
+            const { piece, endPos, capturedPiece, gravePos, promotion } = activeAnimation;
+            piece.mesh.position.copy(endPos);
+            piece.mesh.rotation.set(0, 0, 0);
+
+            // Se houve promoção de Peão (ex: para Dama), substitui a malha 3D no pouso
+            if (promotion) {
+                scene.remove(piece.mesh);
+                piece.type = promotion;
+                const newMesh = buildCustomPieceMesh(promotion, piece.color, teamConfig);
+                newMesh.position.copy(endPos);
+                setPieceSquareTag(newMesh, fileRankToAlgebraic(piece.file, piece.rank));
+                scene.add(newMesh);
+                piece.mesh = newMesh;
+                spawnCaptureEffect(endPos);
+            }
+
+            if (capturedPiece) {
+                capturedPiece.mesh.position.copy(gravePos);
+                capturedPiece.mesh.rotation.set(0, 0, 0);
+            }
+        }
+
+        const callback = activeAnimation.onComplete;
+        activeAnimation = null;
+        if (callback) callback();
+    }
+}
+
+function updateStatusUI(lastSan = null) {
+    const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
+    document.getElementById('ui-turn').textContent = `Turno Atual: ${turn}`;
+
+    if (game.isCheckmate()) {
+        const winner = game.turn() === 'w' ? 'Pretas' : 'Brancas';
+        document.getElementById('ui-status').textContent = `XEQUE-MATE! Vitória das ${winner}!`;
+    } else if (game.isDraw()) {
+        document.getElementById('ui-status').textContent = 'Empate!';
+    } else if (game.inCheck()) {
+        document.getElementById('ui-status').textContent = `Vez das ${turn} (XEQUE!)`;
+    } else {
+        document.getElementById('ui-status').textContent = `Vez das ${turn}`;
+    }
+
+    if (lastSan) {
+        document.getElementById('ui-lastmove').textContent = `Último lance jogado: ${lastSan}`;
+    }
+}
+
+// ==========================================
+// 6. INTELIGÊNCIA ARTIFICIAL
+// ==========================================
+const pieceValues = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+function evaluateBoard() {
+    let score = 0;
+    const board = game.board();
+    for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+            const p = board[r][f];
+            if (p) {
+                const val = pieceValues[p.type] || 0;
+                score += p.color === 'w' ? val : -val;
+            }
+        }
+    }
+    return score;
+}
+
+function makeAIMove() {
+    if (game.isGameOver() || activeAnimation) return;
+    const moves = game.moves({ verbose: true });
+    if (moves.length === 0) return;
+
+    let bestMove = moves[0];
+    let bestScore = Infinity;
+
+    for (const move of moves) {
+        game.move(move);
+        let score = evaluateBoard() + (Math.random() * 25 - 12.5);
+        if (game.inCheck()) score -= 35;
+        game.undo();
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestMove = move;
+        }
+    }
+
+    const result = game.move(bestMove);
+    updateStatusUI(result.san);
+    executeAnimatedMove(result, null);
+}
+
+// ==========================================
+// 7. INTERAÇÃO COM O MOUSE (RAYCASTER 3D)
+// ==========================================
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let pointerDownPos = { x: 0, y: 0 };
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+    pointerDownPos = { x: e.clientX, y: e.clientY };
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+    // Bloqueia cliques enquanto uma animação estiver em andamento
+    if (activeAnimation) return;
+
+    const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+    if (dist > 6) return;
+
+    const mode = document.getElementById('game-mode').value;
+    if (mode === 'ai' && game.turn() === 'b') return;
+    if (game.isGameOver()) return;
+
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const activePieceMeshes = allPieces.filter(p => !p.captured).map(p => p.mesh);
+    const hits = raycaster.intersectObjects([...activePieceMeshes, ...interactiveSquares], true);
+
+    if (hits.length === 0) return;
+
+    let clickedSquare = null;
+    let obj = hits[0].object;
+    while (obj && !clickedSquare) {
+        if (obj.userData && obj.userData.square) {
+            clickedSquare = obj.userData.square;
+        }
+        obj = obj.parent;
+    }
+
+    if (!clickedSquare) return;
+
+    const chosenMove = legalMovesForSelected.find(m => m.to === clickedSquare);
+    if (chosenMove) {
+        const moveResult = game.move({
+            from: selectedSquare,
+            to: clickedSquare,
+            promotion: 'q'
+        });
+
+        selectedSquare = null;
+        legalMovesForSelected = [];
+        selectedRingMesh.visible = false;
+        clearMoveMarkers();
+
+        updateStatusUI(moveResult.san);
+
+        executeAnimatedMove(moveResult, () => {
+            if (mode === 'ai' && !game.isGameOver() && game.turn() === 'b') {
+                setTimeout(makeAIMove, 250);
+            }
+        });
+        return;
+    }
+
+    const pieceAtSquare = game.get(clickedSquare);
+    if (pieceAtSquare && pieceAtSquare.color === game.turn()) {
+        selectedSquare = clickedSquare;
+        legalMovesForSelected = game.moves({ square: clickedSquare, verbose: true });
+
+        const { file, rank } = algebraicToCoord(clickedSquare);
+        const pos = coordToWorld(file, rank);
+        selectedRingMesh.position.set(pos.x, 0.02, pos.z);
+        selectedRingMesh.visible = true;
+
+        showMoveMarkers(legalMovesForSelected);
+    } else {
+        selectedSquare = null;
+        legalMovesForSelected = [];
+        selectedRingMesh.visible = false;
+        clearMoveMarkers();
+    }
+});
+
+// ==========================================
+// 8. BOTÕES DE CONTROLE E LOOP DE RENDER
+// ==========================================
+document.getElementById('btn-new').addEventListener('click', () => {
+    game.reset();
+    selectedSquare = null;
+    legalMovesForSelected = [];
+    selectedRingMesh.visible = false;
+    clearMoveMarkers();
+    rebuildFullSceneFromChessJS();
+    document.getElementById('ui-lastmove').textContent = 'Nova partida iniciada!';
+});
+
+document.getElementById('btn-undo').addEventListener('click', () => {
+    if (activeAnimation) return;
+    const mode = document.getElementById('game-mode').value;
+    if (mode === 'ai') {
+        game.undo();
+        game.undo();
+    } else {
+        game.undo();
+    }
+    selectedSquare = null;
+    legalMovesForSelected = [];
+    selectedRingMesh.visible = false;
+    clearMoveMarkers();
+    rebuildFullSceneFromChessJS();
+});
+
+document.getElementById('btn-cam-w').addEventListener('click', () => {
+    camera.position.set(0, 13.5, 14.5);
+});
+
+document.getElementById('btn-cam-b').addEventListener('click', () => {
+    camera.position.set(0, 13.5, -14.5);
+});
+
+document.getElementById('speed-slider').addEventListener('input', (e) => {
+    playbackSpeed = parseFloat(e.target.value);
+});
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+rebuildFullSceneFromChessJS();
+const clock = new THREE.Clock();
+
+function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.1);
+
+    updateAnimation(dt);
+    updateEffects(dt);
+
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
